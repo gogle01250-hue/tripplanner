@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, FileResponse
-import psycopg2, psycopg2.extras, json, os, re, secrets, string, time, requests
+import psycopg2, psycopg2.extras, json, os, re, time, requests
 
 DATABASE_URL = os.environ["DATABASE_URL"]
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -24,10 +24,10 @@ def init_db():
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS rooms (
                     name       TEXT PRIMARY KEY,
-                    password   TEXT NOT NULL,
                     created_at TIMESTAMP DEFAULT NOW()
                 )
             """)
+            cur.execute("ALTER TABLE rooms DROP COLUMN IF EXISTS password")
         conn.commit()
 
 init_db()
@@ -52,13 +52,6 @@ def kv_set(key: str, value):
             )
         conn.commit()
 
-# ── パスワード生成 ────────────────────────────────────────
-def generate_password() -> str:
-    """ランダム12文字英数字（XXXX-XXXX-XXXX形式）"""
-    chars = string.ascii_uppercase + string.digits
-    groups = [''.join(secrets.choice(chars) for _ in range(4)) for _ in range(3)]
-    return '-'.join(groups)
-
 # ── ルームID バリデーション ──────────────────────────────
 ROOM_RE = re.compile(r'^[^\s:/\\]{1,32}$')
 
@@ -67,56 +60,20 @@ def room_key(room: str, kind: str) -> str:
         raise ValueError(f"Invalid room id: {room!r}")
     return f"{room}:{kind}"
 
-# ── 認証API ──────────────────────────────────────────────
-@app.post("/api/auth/register")
-async def register(request: Request):
+# ── 認証API（パスワードなし・ユーザー名のみ） ──────────────
+@app.post("/api/auth/enter")
+async def enter_room(request: Request):
     body = await request.json()
     name = (body.get("name") or "").strip()
     if not name or not ROOM_RE.match(name):
         return JSONResponse({"ok": False, "error": "IDが無効です（1〜32文字、スペース・コロン・スラッシュ不可）"}, status_code=400)
-    password = generate_password()
-    try:
-        with get_db() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "INSERT INTO rooms(name, password) VALUES(%s, %s)",
-                    (name, password)
-                )
-            conn.commit()
-        return JSONResponse({"ok": True, "password": password})
-    except psycopg2.errors.UniqueViolation:
-        return JSONResponse({"ok": False, "error": "このIDは既に使用されています"}, status_code=409)
-
-@app.post("/api/auth/login")
-async def login(request: Request):
-    body = await request.json()
-    name = (body.get("name") or "").strip()
-    password = (body.get("password") or "").strip()
-    if not name or not password:
-        return JSONResponse({"ok": False, "error": "IDとパスワードを入力してください"}, status_code=400)
     with get_db() as conn:
-        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute("SELECT password FROM rooms WHERE name=%s", (name,))
-            row = cur.fetchone()
-    if not row or row["password"] != password:
-        return JSONResponse({"ok": False, "error": "IDまたはパスワードが違います"}, status_code=401)
-    return JSONResponse({"ok": True})
-
-@app.post("/api/auth/change-password")
-async def change_password(request: Request):
-    body = await request.json()
-    name         = (body.get("name") or "").strip()
-    new_password = (body.get("new_password") or "").strip()
-    if not name:
-        return JSONResponse({"ok": False, "error": "ルームIDが不明です"}, status_code=400)
-    if len(new_password) < 5:
-        return JSONResponse({"ok": False, "error": "パスワードは5文字以上で入力してください"}, status_code=400)
-    with get_db() as conn:
-        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute("SELECT name FROM rooms WHERE name=%s", (name,))
-            if not cur.fetchone():
-                return JSONResponse({"ok": False, "error": "ルームが見つかりません"}, status_code=404)
-            cur.execute("UPDATE rooms SET password=%s WHERE name=%s", (new_password, name))
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO rooms(name) VALUES(%s) ON CONFLICT (name) DO NOTHING",
+                (name,)
+            )
+        conn.commit()
     return JSONResponse({"ok": True})
 
 # ── 旅行データAPI（ルームスコープ） ────────────────────────

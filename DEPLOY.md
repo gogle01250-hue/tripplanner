@@ -28,7 +28,6 @@ CREATE TABLE IF NOT EXISTS kv (
 
 CREATE TABLE IF NOT EXISTS rooms (
     name       TEXT PRIMARY KEY,
-    password   TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT NOW()
 );
 ```
@@ -118,6 +117,6 @@ uvicorn main:app --reload --port 8000
 
 ## 使い方
 
-1. `/` でルームID（旅行グループ名）を新規作成 → 発行されたパスワードを一緒に旅行する人に共有
-2. パスワードを知っている人は誰でも同じルームにログインし、同じ旅行データを閲覧・編集できる
+1. `/` でユーザー名（旅行グループ名）を入力するだけで入室（パスワードは不要）
+2. 同じユーザー名を知っている人は誰でも同じ旅行データを閲覧・編集できる
 3. 旅程・地図・予算の変更は自動保存される（他の人の変更を見るには「更新」ボタンを押す）

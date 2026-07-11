@@ -42,21 +42,7 @@
     header button:hover { background: rgba(255,255,255,0.4); }
     .container { max-width: 900px; margin: 0 auto; padding: 16px; }
     .empty-state { text-align: center; color: #64748b; padding: 60px 16px; }
-    .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
-    .tabs button {
-        flex: 1;
-        padding: 10px;
-        border: none;
-        border-radius: 10px;
-        background: #e2e8f0;
-        color: #475569;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-    }
-    .tabs button.active { background: #0ea5e9; color: #fff; }
-    .panel { display: none; }
-    .panel.active { display: block; }
+    .section-title { font-size: 14px; font-weight: 700; color: #334155; margin: 0 0 10px; }
     .card {
         background: #fff;
         border-radius: 12px;
@@ -64,18 +50,23 @@
         margin-bottom: 12px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     }
-    .day-tabs { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 12px; padding-bottom: 4px; }
-    .day-tabs button {
+    .day-tabs { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 16px; padding-bottom: 4px; }
+    .day-tab {
+        display: flex;
+        align-items: center;
+        gap: 4px;
         white-space: nowrap;
-        padding: 6px 12px;
+        padding: 4px 6px 4px 12px;
         border-radius: 8px;
         border: 1px solid #cbd5e1;
         background: #fff;
         color: #334155;
-        cursor: pointer;
         font-size: 13px;
     }
-    .day-tabs button.active { background: #0f172a; color: #fff; border-color: #0f172a; }
+    .day-tab button.select-day { border: none; background: none; cursor: pointer; font-size: 13px; color: inherit; padding: 2px; }
+    .day-tab.active { background: #0f172a; color: #fff; border-color: #0f172a; }
+    .day-tab button.delete-day { border: none; background: none; cursor: pointer; color: inherit; opacity: 0.6; font-size: 12px; padding: 2px 4px; }
+    .day-tab button.delete-day:hover { opacity: 1; }
     .item-row {
         display: flex;
         align-items: flex-start;
@@ -89,6 +80,9 @@
     .item-title { font-weight: 600; font-size: 15px; }
     .item-place { font-size: 13px; color: #64748b; }
     .item-notes { font-size: 13px; color: #94a3b8; margin-top: 2px; white-space: pre-wrap; }
+    .item-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; font-size: 12px; }
+    .item-transport-tag { background: #f1f5f9; color: #334155; padding: 2px 8px; border-radius: 999px; }
+    .item-cost-tag { background: #ecfdf5; color: #047857; padding: 2px 8px; border-radius: 999px; font-weight: 600; }
     .item-actions { display: flex; gap: 4px; flex-shrink: 0; }
     .icon-btn {
         border: none; background: none; cursor: pointer; font-size: 15px; padding: 4px 6px; border-radius: 6px; color: #94a3b8;
@@ -104,7 +98,9 @@
         font-family: inherit;
     }
     .row2 { display: grid; grid-template-columns: 100px 1fr; gap: 10px; }
-    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .transport-options { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 6px; }
+    .transport-option { display: flex; align-items: center; gap: 5px; font-size: 14px; color: #334155; }
+    .transport-option input { width: auto; }
     button.primary {
         margin-top: 12px;
         padding: 10px 16px;
@@ -138,13 +134,9 @@
     }
     .suggestion-item { padding: 8px 10px; font-size: 13px; cursor: pointer; }
     .suggestion-item:hover { background: #f1f5f9; }
-    #map { height: 420px; border-radius: 12px; }
-    .expense-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #eef2f7; }
-    .expense-row:last-child { border-bottom: none; }
-    .expense-cat { font-size: 12px; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 999px; flex-shrink: 0; }
-    .expense-desc { flex: 1; font-size: 14px; }
-    .expense-amount { font-weight: 600; font-size: 14px; flex-shrink: 0; }
-    .totals { display: flex; justify-content: space-between; font-weight: 700; font-size: 16px; margin-top: 8px; padding-top: 8px; border-top: 2px solid #0f172a; }
+    #map { height: 380px; border-radius: 12px; }
+    .totals-row { display: flex; justify-content: space-between; font-size: 14px; padding: 6px 0; }
+    .totals-row.grand { font-weight: 700; font-size: 16px; margin-top: 4px; padding-top: 8px; border-top: 2px solid #0f172a; }
     .modal-overlay {
         display: none;
         position: fixed; inset: 0; background: rgba(0,0,0,0.4);
@@ -179,33 +171,24 @@
     </div>
 
     <div id="trip-view" style="display:none;">
-        <div class="tabs">
-            <button class="active" data-tab="itinerary" onclick="switchTab('itinerary')">📅 旅程</button>
-            <button data-tab="map" onclick="switchTab('map')">🗺️ 地図</button>
-            <button data-tab="budget" onclick="switchTab('budget')">💰 予算</button>
+        <div class="day-tabs" id="day-tabs"></div>
+
+        <div class="card">
+            <div class="section-title">📅 旅程</div>
+            <div id="item-list"></div>
+            <button class="primary" onclick="openItemModal()">+ 予定を追加</button>
+            <button class="ghost" onclick="addDay()">+ 日を追加</button>
         </div>
 
-        <div class="panel active" id="panel-itinerary">
-            <div class="day-tabs" id="day-tabs"></div>
-            <div class="card">
-                <div id="item-list"></div>
-                <button class="primary" onclick="openItemModal()">+ 予定を追加</button>
-                <button class="ghost" onclick="addDay()">+ 日を追加</button>
-            </div>
+        <div class="card">
+            <div class="section-title">🗺️ 地図</div>
+            <div id="map"></div>
         </div>
 
-        <div class="panel" id="panel-map">
-            <div class="card">
-                <div id="map"></div>
-            </div>
-        </div>
-
-        <div class="panel" id="panel-budget">
-            <div class="card">
-                <div id="expense-list"></div>
-                <div class="totals" id="expense-totals"></div>
-                <button class="primary" onclick="openExpenseModal()">+ 支出を追加</button>
-            </div>
+        <div class="card">
+            <div class="section-title">💰 予算</div>
+            <div class="totals-row" id="day-total"></div>
+            <div class="totals-row grand" id="trip-total"></div>
         </div>
     </div>
 </div>
@@ -240,31 +223,26 @@
         <input type="text" id="item-place-search" placeholder="地名を入力して検索" oninput="onPlaceSearchInput()">
         <div class="suggestions" id="place-suggestions" style="display:none;"></div>
         <div id="item-place-selected" style="font-size:13px; color:#0369a1; margin-top:6px;"></div>
+
+        <label>前の予定からの移動手段</label>
+        <div class="transport-options">
+            <label class="transport-option"><input type="checkbox" id="transport-car"> 🚗 車</label>
+            <label class="transport-option"><input type="checkbox" id="transport-train"> 🚆 電車</label>
+            <label class="transport-option"><input type="checkbox" id="transport-plane"> ✈️ 飛行機</label>
+            <label class="transport-option"><input type="checkbox" id="transport-other" onchange="toggleOtherLabel()"> 🔹 その他</label>
+        </div>
+        <input type="text" id="transport-other-label" placeholder="その他の移動手段（自由記入）" style="display:none; margin-top:6px;">
+
+        <div class="row2">
+            <div><label>金額</label><input type="number" id="item-cost" placeholder="0"></div>
+            <div><label>通貨</label><input type="text" id="item-cost-currency" value="JPY"></div>
+        </div>
+
         <label>メモ</label>
         <textarea id="item-notes" rows="2"></textarea>
         <div class="modal-actions">
             <button class="ghost" onclick="closeModal('item-modal')">キャンセル</button>
             <button class="primary" onclick="saveItem()">保存</button>
-        </div>
-    </div>
-</div>
-
-<!-- 支出追加/編集モーダル -->
-<div class="modal-overlay" id="expense-modal">
-    <div class="modal">
-        <h2 id="expense-modal-title">支出を追加</h2>
-        <input type="hidden" id="expense-id">
-        <label>カテゴリ</label>
-        <input type="text" id="expense-category" placeholder="例: 交通・宿泊・食事">
-        <label>内容</label>
-        <input type="text" id="expense-desc" placeholder="例: 航空券">
-        <div class="row2">
-            <div><label>金額</label><input type="number" id="expense-amount" placeholder="0"></div>
-            <div><label>通貨</label><input type="text" id="expense-currency" value="JPY"></div>
-        </div>
-        <div class="modal-actions">
-            <button class="ghost" onclick="closeModal('expense-modal')">キャンセル</button>
-            <button class="primary" onclick="saveExpense()">保存</button>
         </div>
     </div>
 </div>
@@ -283,7 +261,6 @@ document.getElementById('room-badge').textContent = '👥 ' + room;
 let trips = [];
 let currentTripId = null;
 let currentDayIndex = 0;
-let activeTab = 'itinerary';
 let map = null;
 let mapLayer = null;
 let selectedPlace = null;
@@ -374,8 +351,7 @@ function createTrip() {
         title,
         startDate: start,
         endDate: end,
-        days: dateRange(start, end),
-        expenses: []
+        days: dateRange(start, end)
     };
     trips.push(trip);
     currentTripId = trip.id;
@@ -423,24 +399,23 @@ function addDay() {
     scheduleSave();
 }
 
-// ── タブ切り替え ──────────────────────────────────────────
-function switchTab(tab) {
-    activeTab = tab;
-    document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-    document.getElementById('panel-itinerary').classList.toggle('active', tab === 'itinerary');
-    document.getElementById('panel-map').classList.toggle('active', tab === 'map');
-    document.getElementById('panel-budget').classList.toggle('active', tab === 'budget');
-    if (tab === 'map') {
-        setTimeout(renderMap, 50);
-    }
+function deleteDay(idx) {
+    const trip = currentTrip();
+    if (!trip) return;
+    if (trip.days.length <= 1) { showToast('最後の1日は削除できません'); return; }
+    trip.days.splice(idx, 1);
+    if (currentDayIndex >= trip.days.length) currentDayIndex = trip.days.length - 1;
+    else if (currentDayIndex > idx) currentDayIndex -= 1;
+    renderAll();
+    scheduleSave();
 }
 
 // ── 全体再描画 ────────────────────────────────────────────
 function renderAll() {
     renderDayTabs();
     renderItems();
-    renderExpenses();
-    if (activeTab === 'map') renderMap();
+    renderMap();
+    renderBudget();
 }
 
 function renderDayTabs() {
@@ -449,12 +424,44 @@ function renderDayTabs() {
     el.innerHTML = '';
     if (!trip) return;
     trip.days.forEach((day, i) => {
-        const btn = document.createElement('button');
-        btn.textContent = day.date;
-        btn.className = i === currentDayIndex ? 'active' : '';
-        btn.onclick = () => { currentDayIndex = i; renderAll(); };
-        el.appendChild(btn);
+        const tab = document.createElement('div');
+        tab.className = 'day-tab' + (i === currentDayIndex ? ' active' : '');
+        const selectBtn = document.createElement('button');
+        selectBtn.className = 'select-day';
+        selectBtn.textContent = day.date;
+        selectBtn.onclick = () => { currentDayIndex = i; renderAll(); };
+        const delBtn = document.createElement('button');
+        delBtn.className = 'delete-day';
+        delBtn.textContent = '×';
+        delBtn.title = 'この日を削除';
+        delBtn.onclick = (e) => { e.stopPropagation(); deleteDay(i); };
+        tab.appendChild(selectBtn);
+        tab.appendChild(delBtn);
+        el.appendChild(tab);
     });
+}
+
+function transportLabel(t) {
+    if (!t) return '';
+    const parts = [];
+    if (t.car) parts.push('🚗 車');
+    if (t.train) parts.push('🚆 電車');
+    if (t.plane) parts.push('✈️ 飛行機');
+    if (t.other) parts.push('🔹 ' + (t.otherLabel || 'その他'));
+    return parts.join(' + ');
+}
+
+function transportColor(t) {
+    if (!t) return '#94a3b8';
+    if (t.car) return '#f97316';
+    if (t.train) return '#16a34a';
+    if (t.plane) return '#3b82f6';
+    if (t.other) return '#8b5cf6';
+    return '#94a3b8';
+}
+
+function hasTransport(t) {
+    return !!(t && (t.car || t.train || t.plane || t.other));
 }
 
 function renderItems() {
@@ -468,6 +475,8 @@ function renderItems() {
         return;
     }
     items.forEach((item, idx) => {
+        const tLabel = transportLabel(item.transport);
+        const costLabel = item.cost != null && item.cost !== '' ? `${Number(item.cost).toLocaleString()} ${item.costCurrency || 'JPY'}` : '';
         const row = document.createElement('div');
         row.className = 'item-row';
         row.innerHTML = `
@@ -476,6 +485,10 @@ function renderItems() {
                 <div class="item-title">${escapeHtml(item.title || '')}</div>
                 ${item.place ? `<div class="item-place">📍 ${escapeHtml(item.place)}</div>` : ''}
                 ${item.notes ? `<div class="item-notes">${escapeHtml(item.notes)}</div>` : ''}
+                <div class="item-meta">
+                    ${tLabel ? `<span class="item-transport-tag">${tLabel}</span>` : ''}
+                    ${costLabel ? `<span class="item-cost-tag">${costLabel}</span>` : ''}
+                </div>
             </div>
             <div class="item-actions">
                 <button class="icon-btn" title="上へ" onclick="moveItem(${idx}, -1)">↑</button>
@@ -499,14 +512,19 @@ function moveItem(idx, dir) {
     if (newIdx < 0 || newIdx >= items.length) return;
     [items[idx], items[newIdx]] = [items[newIdx], items[idx]];
     renderItems();
+    renderMap();
     scheduleSave();
 }
 
 // ── 予定モーダル ──────────────────────────────────────────
 let geocodeTimer = null;
 
-function openItemModal() {
-    document.getElementById('item-modal-title').textContent = '予定を追加';
+function toggleOtherLabel() {
+    const checked = document.getElementById('transport-other').checked;
+    document.getElementById('transport-other-label').style.display = checked ? 'block' : 'none';
+}
+
+function resetItemModal() {
     document.getElementById('item-id').value = '';
     document.getElementById('item-time').value = '';
     document.getElementById('item-title').value = '';
@@ -514,7 +532,20 @@ function openItemModal() {
     document.getElementById('item-place-search').value = '';
     document.getElementById('item-place-selected').textContent = '';
     document.getElementById('place-suggestions').style.display = 'none';
+    document.getElementById('transport-car').checked = false;
+    document.getElementById('transport-train').checked = false;
+    document.getElementById('transport-plane').checked = false;
+    document.getElementById('transport-other').checked = false;
+    document.getElementById('transport-other-label').value = '';
+    document.getElementById('transport-other-label').style.display = 'none';
+    document.getElementById('item-cost').value = '';
+    document.getElementById('item-cost-currency').value = 'JPY';
     selectedPlace = null;
+}
+
+function openItemModal() {
+    resetItemModal();
+    document.getElementById('item-modal-title').textContent = '予定を追加';
     document.getElementById('item-modal').classList.add('active');
 }
 
@@ -522,6 +553,7 @@ function editItem(id) {
     const trip = currentTrip();
     const item = trip.days[currentDayIndex].items.find(i => i.id === id);
     if (!item) return;
+    resetItemModal();
     document.getElementById('item-modal-title').textContent = '予定を編集';
     document.getElementById('item-id').value = item.id;
     document.getElementById('item-time').value = item.time || '';
@@ -529,8 +561,16 @@ function editItem(id) {
     document.getElementById('item-notes').value = item.notes || '';
     document.getElementById('item-place-search').value = item.place || '';
     document.getElementById('item-place-selected').textContent = item.place ? `選択中: ${item.place}` : '';
-    document.getElementById('place-suggestions').style.display = 'none';
     selectedPlace = item.place ? {display_name: item.place, lat: item.lat, lon: item.lng} : null;
+    const t = item.transport || {};
+    document.getElementById('transport-car').checked = !!t.car;
+    document.getElementById('transport-train').checked = !!t.train;
+    document.getElementById('transport-plane').checked = !!t.plane;
+    document.getElementById('transport-other').checked = !!t.other;
+    document.getElementById('transport-other-label').value = t.otherLabel || '';
+    document.getElementById('transport-other-label').style.display = t.other ? 'block' : 'none';
+    document.getElementById('item-cost').value = item.cost != null ? item.cost : '';
+    document.getElementById('item-cost-currency').value = item.costCurrency || 'JPY';
     document.getElementById('item-modal').classList.add('active');
 }
 
@@ -579,12 +619,23 @@ function saveItem() {
     const lat = selectedPlace ? selectedPlace.lat : null;
     const lng = selectedPlace ? selectedPlace.lon : null;
 
+    const transport = {
+        car: document.getElementById('transport-car').checked,
+        train: document.getElementById('transport-train').checked,
+        plane: document.getElementById('transport-plane').checked,
+        other: document.getElementById('transport-other').checked,
+        otherLabel: document.getElementById('transport-other-label').value.trim()
+    };
+    const costRaw = document.getElementById('item-cost').value;
+    const cost = costRaw === '' ? null : parseFloat(costRaw);
+    const costCurrency = document.getElementById('item-cost-currency').value.trim() || 'JPY';
+
     const items = trip.days[currentDayIndex].items;
     if (id) {
         const item = items.find(i => i.id === id);
-        Object.assign(item, {time, title, notes, place, lat, lng});
+        Object.assign(item, {time, title, notes, place, lat, lng, transport, cost, costCurrency});
     } else {
-        items.push({id: uid(), time, title, notes, place, lat, lng});
+        items.push({id: uid(), time, title, notes, place, lat, lng, transport, cost, costCurrency});
     }
     items.sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
     closeModal('item-modal');
@@ -602,7 +653,7 @@ function deleteItem(id) {
 // ── 地図 ──────────────────────────────────────────────────
 function renderMap() {
     const trip = currentTrip();
-    if (!trip) return;
+    if (!document.getElementById('map')) return;
     if (!map) {
         map = L.map('map').setView([35.681236, 139.767125], 5);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -615,103 +666,64 @@ function renderMap() {
     if (mapLayer) mapLayer.remove();
     mapLayer = L.layerGroup().addTo(map);
 
+    if (!trip) return;
     const items = (trip.days[currentDayIndex] ? trip.days[currentDayIndex].items : [])
         .filter(i => i.lat != null && i.lng != null);
 
     if (items.length === 0) return;
 
-    const latlngs = items.map(i => [i.lat, i.lng]);
     items.forEach((item, idx) => {
         L.marker([item.lat, item.lng])
             .addTo(mapLayer)
             .bindPopup(`<strong>${idx + 1}. ${escapeHtml(item.title)}</strong><br>${escapeHtml(item.place || '')}`);
     });
-    L.polyline(latlngs, {color: '#0ea5e9', weight: 3, dashArray: '6 6'}).addTo(mapLayer);
+
+    for (let i = 1; i < items.length; i++) {
+        const prev = items[i - 1];
+        const cur = items[i];
+        const transport = cur.transport;
+        const colored = hasTransport(transport);
+        const color = transportColor(transport);
+        const line = L.polyline([[prev.lat, prev.lng], [cur.lat, cur.lng]], {
+            color,
+            weight: colored ? 4 : 2,
+            dashArray: colored ? null : '6 6'
+        }).addTo(mapLayer);
+        const label = transportLabel(transport) || '移動';
+        line.bindPopup(`${label}: ${escapeHtml(prev.place || prev.title)} → ${escapeHtml(cur.place || cur.title)}`);
+    }
+
+    const latlngs = items.map(i => [i.lat, i.lng]);
     map.fitBounds(latlngs, {padding: [30, 30]});
 }
 
-// ── 予算 ──────────────────────────────────────────────────
-function openExpenseModal() {
-    document.getElementById('expense-modal-title').textContent = '支出を追加';
-    document.getElementById('expense-id').value = '';
-    document.getElementById('expense-category').value = '';
-    document.getElementById('expense-desc').value = '';
-    document.getElementById('expense-amount').value = '';
-    document.getElementById('expense-currency').value = 'JPY';
-    document.getElementById('expense-modal').classList.add('active');
-}
-
-function editExpense(id) {
-    const trip = currentTrip();
-    const exp = trip.expenses.find(e => e.id === id);
-    if (!exp) return;
-    document.getElementById('expense-modal-title').textContent = '支出を編集';
-    document.getElementById('expense-id').value = exp.id;
-    document.getElementById('expense-category').value = exp.category || '';
-    document.getElementById('expense-desc').value = exp.description || '';
-    document.getElementById('expense-amount').value = exp.amount;
-    document.getElementById('expense-currency').value = exp.currency || 'JPY';
-    document.getElementById('expense-modal').classList.add('active');
-}
-
-function saveExpense() {
-    const trip = currentTrip();
-    if (!trip) return;
-    const id = document.getElementById('expense-id').value;
-    const category = document.getElementById('expense-category').value.trim() || 'その他';
-    const description = document.getElementById('expense-desc').value.trim();
-    const amount = parseFloat(document.getElementById('expense-amount').value) || 0;
-    const currency = document.getElementById('expense-currency').value.trim() || 'JPY';
-    if (!trip.expenses) trip.expenses = [];
-    if (id) {
-        const exp = trip.expenses.find(e => e.id === id);
-        Object.assign(exp, {category, description, amount, currency});
-    } else {
-        trip.expenses.push({id: uid(), category, description, amount, currency});
-    }
-    closeModal('expense-modal');
-    renderExpenses();
-    scheduleSave();
-}
-
-function deleteExpense(id) {
-    const trip = currentTrip();
-    trip.expenses = trip.expenses.filter(e => e.id !== id);
-    renderExpenses();
-    scheduleSave();
-}
-
-function renderExpenses() {
-    const trip = currentTrip();
-    const el = document.getElementById('expense-list');
-    const totalsEl = document.getElementById('expense-totals');
-    el.innerHTML = '';
-    totalsEl.innerHTML = '';
-    if (!trip) return;
-    const expenses = trip.expenses || [];
-    if (expenses.length === 0) {
-        el.innerHTML = '<p style="color:#94a3b8; font-size:14px;">支出はまだありません</p>';
-        return;
-    }
-    expenses.forEach(exp => {
-        const row = document.createElement('div');
-        row.className = 'expense-row';
-        row.innerHTML = `
-            <div class="expense-cat">${escapeHtml(exp.category)}</div>
-            <div class="expense-desc">${escapeHtml(exp.description || '')}</div>
-            <div class="expense-amount">${exp.amount.toLocaleString()} ${escapeHtml(exp.currency)}</div>
-            <div class="item-actions">
-                <button class="icon-btn" onclick="editExpense('${exp.id}')">✏️</button>
-                <button class="icon-btn" onclick="deleteExpense('${exp.id}')">🗑️</button>
-            </div>
-        `;
-        el.appendChild(row);
-    });
-
+// ── 予算サマリー ──────────────────────────────────────────
+function sumByCurrency(items) {
     const byCurrency = {};
-    expenses.forEach(e => { byCurrency[e.currency] = (byCurrency[e.currency] || 0) + e.amount; });
-    const totalStr = Object.entries(byCurrency).map(([cur, amt]) => `${amt.toLocaleString()} ${cur}`).join(' + ');
-    totalsEl.innerHTML = `<span>合計</span><span>${totalStr}</span>`;
+    items.forEach(i => {
+        if (i.cost != null && i.cost !== '' && !isNaN(i.cost)) {
+            const cur = i.costCurrency || 'JPY';
+            byCurrency[cur] = (byCurrency[cur] || 0) + Number(i.cost);
+        }
+    });
+    return byCurrency;
+}
+
+function formatTotals(byCurrency) {
+    const entries = Object.entries(byCurrency);
+    if (entries.length === 0) return '0';
+    return entries.map(([cur, amt]) => `${amt.toLocaleString()} ${cur}`).join(' + ');
+}
+
+function renderBudget() {
+    const trip = currentTrip();
+    const dayEl = document.getElementById('day-total');
+    const tripEl = document.getElementById('trip-total');
+    if (!trip) { dayEl.innerHTML = ''; tripEl.innerHTML = ''; return; }
+    const dayItems = trip.days[currentDayIndex] ? trip.days[currentDayIndex].items : [];
+    const allItems = trip.days.flatMap(d => d.items);
+    dayEl.innerHTML = `<span>本日の合計</span><span>${formatTotals(sumByCurrency(dayItems))}</span>`;
+    tripEl.innerHTML = `<span>旅行全体の合計</span><span>${formatTotals(sumByCurrency(allItems))}</span>`;
 }
 
 // ── 初期化 ────────────────────────────────────────────────
