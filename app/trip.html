@@ -651,7 +651,46 @@ function deleteItem(id) {
 }
 
 // ── 地図 ──────────────────────────────────────────────────
-function renderMap() {
+const _routeCache = {};
+
+async function fetchDrivingRoute(prev, cur) {
+    const key = `${prev.lat},${prev.lng}-${cur.lat},${cur.lng}`;
+    if (_routeCache[key]) return _routeCache[key];
+    try {
+        const res = await fetch(`/api/route?from_lat=${prev.lat}&from_lng=${prev.lng}&to_lat=${cur.lat}&to_lng=${cur.lng}`);
+        const data = await res.json();
+        if (!data.ok) return null;
+        _routeCache[key] = data;
+        return data;
+    } catch (e) {
+        return null;
+    }
+}
+
+function drawSegment(prev, cur) {
+    const transport = cur.transport;
+    const colored = hasTransport(transport);
+    const color = transportColor(transport);
+    const label = transportLabel(transport) || '移動';
+    const popupText = `${label}: ${escapeHtml(prev.place || prev.title)} → ${escapeHtml(cur.place || cur.title)}`;
+    const line = L.polyline([[prev.lat, prev.lng], [cur.lat, cur.lng]], {
+        color,
+        weight: colored ? 4 : 2,
+        dashArray: colored ? null : '6 6'
+    }).addTo(mapLayer);
+    line.bindPopup(popupText);
+    if (transport && transport.train) {
+        // 線路っぽく見せるための重ね線（白い破線を上に重ねてタイ風の模様にする）
+        L.polyline([[prev.lat, prev.lng], [cur.lat, cur.lng]], {
+            color: '#ffffff',
+            weight: 2,
+            dashArray: '1 9',
+            opacity: 0.9
+        }).addTo(mapLayer);
+    }
+}
+
+async function renderMap() {
     const trip = currentTrip();
     if (!document.getElementById('map')) return;
     if (!map) {
@@ -678,24 +717,30 @@ function renderMap() {
             .bindPopup(`<strong>${idx + 1}. ${escapeHtml(item.title)}</strong><br>${escapeHtml(item.place || '')}`);
     });
 
+    const renderToken = ++renderMap._token;
+
     for (let i = 1; i < items.length; i++) {
         const prev = items[i - 1];
         const cur = items[i];
-        const transport = cur.transport;
-        const colored = hasTransport(transport);
-        const color = transportColor(transport);
-        const line = L.polyline([[prev.lat, prev.lng], [cur.lat, cur.lng]], {
-            color,
-            weight: colored ? 4 : 2,
-            dashArray: colored ? null : '6 6'
-        }).addTo(mapLayer);
-        const label = transportLabel(transport) || '移動';
-        line.bindPopup(`${label}: ${escapeHtml(prev.place || prev.title)} → ${escapeHtml(cur.place || cur.title)}`);
+        if (cur.transport && cur.transport.car) {
+            const route = await fetchDrivingRoute(prev, cur);
+            if (renderToken !== renderMap._token) return; // 別の描画が始まっていたら中断
+            if (route) {
+                const km = (route.distance_m / 1000).toFixed(1);
+                const min = Math.round(route.duration_s / 60);
+                L.polyline(route.geometry, {color: transportColor(cur.transport), weight: 4})
+                    .addTo(mapLayer)
+                    .bindPopup(`🚗 車移動: ${escapeHtml(prev.place || prev.title)} → ${escapeHtml(cur.place || cur.title)}<br>約${km}km・${min}分`);
+                continue;
+            }
+        }
+        drawSegment(prev, cur);
     }
 
     const latlngs = items.map(i => [i.lat, i.lng]);
     map.fitBounds(latlngs, {padding: [30, 30]});
 }
+renderMap._token = 0;
 
 // ── 予算サマリー ──────────────────────────────────────────
 function sumByCurrency(items) {

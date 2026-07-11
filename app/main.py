@@ -124,6 +124,42 @@ def geocode(q: str):
     _geocode_cache[q] = (now, results)
     return JSONResponse(results)
 
+# ── ルート検索 Proxy（OSRM / 実道路ルート・車専用） ────────
+_route_cache = {}
+_ROUTE_CACHE_TTL = 86400  # 24時間（同じ2地点間のルートは基本変わらないので長め）
+
+@app.get("/api/route")
+def route(from_lat: float, from_lng: float, to_lat: float, to_lng: float):
+    cache_key = (round(from_lat, 5), round(from_lng, 5), round(to_lat, 5), round(to_lng, 5))
+    now = time.time()
+    cached = _route_cache.get(cache_key)
+    if cached and now - cached[0] < _ROUTE_CACHE_TTL:
+        return JSONResponse(cached[1])
+
+    try:
+        resp = requests.get(
+            f"https://router.project-osrm.org/route/v1/driving/{from_lng},{from_lat};{to_lng},{to_lat}",
+            params={"overview": "full", "geometries": "geojson"},
+            headers={"User-Agent": "TripPlanner/1.0 (personal travel planning app)"},
+            timeout=8,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        if data.get("code") != "Ok" or not data.get("routes"):
+            return JSONResponse({"ok": False, "error": "ルートが見つかりませんでした"}, status_code=404)
+        r = data["routes"][0]
+        result = {
+            "ok": True,
+            "distance_m": r["distance"],
+            "duration_s": r["duration"],
+            "geometry": [[lat, lng] for lng, lat in r["geometry"]["coordinates"]],
+        }
+    except requests.RequestException:
+        return JSONResponse({"ok": False, "error": "ルート検索に失敗しました"}, status_code=502)
+
+    _route_cache[cache_key] = (now, result)
+    return JSONResponse(result)
+
 # ── 静的ファイル配信 ──────────────────────────────────────
 @app.get("/")
 def index_page():
