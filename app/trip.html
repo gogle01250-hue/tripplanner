@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TripPlanner</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Yu Gothic", sans-serif;
+        background: #f8fafc;
+        color: #0f172a;
+    }
+    header {
+        background: linear-gradient(135deg, #0ea5e9, #6366f1);
+        color: #fff;
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    header h1 { font-size: 18px; margin: 0; flex-shrink: 0; }
+    .room-badge {
+        background: rgba(255,255,255,0.2);
+        border-radius: 999px;
+        padding: 4px 12px;
+        font-size: 13px;
+    }
+    .spacer { flex: 1; }
+    header select, header button {
+        padding: 6px 10px;
+        border-radius: 8px;
+        border: none;
+        font-size: 13px;
+        cursor: pointer;
+    }
+    header button { background: rgba(255,255,255,0.25); color: #fff; }
+    header button:hover { background: rgba(255,255,255,0.4); }
+    .container { max-width: 900px; margin: 0 auto; padding: 16px; }
+    .empty-state { text-align: center; color: #64748b; padding: 60px 16px; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+    .tabs button {
+        flex: 1;
+        padding: 10px;
+        border: none;
+        border-radius: 10px;
+        background: #e2e8f0;
+        color: #475569;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .tabs button.active { background: #0ea5e9; color: #fff; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .day-tabs { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 12px; padding-bottom: 4px; }
+    .day-tabs button {
+        white-space: nowrap;
+        padding: 6px 12px;
+        border-radius: 8px;
+        border: 1px solid #cbd5e1;
+        background: #fff;
+        color: #334155;
+        cursor: pointer;
+        font-size: 13px;
+    }
+    .day-tabs button.active { background: #0f172a; color: #fff; border-color: #0f172a; }
+    .item-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 10px 0;
+        border-bottom: 1px solid #eef2f7;
+    }
+    .item-row:last-child { border-bottom: none; }
+    .item-time { width: 56px; flex-shrink: 0; font-weight: 600; color: #0ea5e9; font-size: 14px; padding-top: 2px; }
+    .item-body { flex: 1; min-width: 0; }
+    .item-title { font-weight: 600; font-size: 15px; }
+    .item-place { font-size: 13px; color: #64748b; }
+    .item-notes { font-size: 13px; color: #94a3b8; margin-top: 2px; white-space: pre-wrap; }
+    .item-actions { display: flex; gap: 4px; flex-shrink: 0; }
+    .icon-btn {
+        border: none; background: none; cursor: pointer; font-size: 15px; padding: 4px 6px; border-radius: 6px; color: #94a3b8;
+    }
+    .icon-btn:hover { background: #f1f5f9; color: #334155; }
+    label { display: block; font-size: 13px; color: #475569; margin: 10px 0 4px; }
+    input, select, textarea {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font-size: 14px;
+        font-family: inherit;
+    }
+    .row2 { display: grid; grid-template-columns: 100px 1fr; gap: 10px; }
+    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    button.primary {
+        margin-top: 12px;
+        padding: 10px 16px;
+        background: #0ea5e9;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    button.primary:hover { background: #0284c7; }
+    button.ghost {
+        margin-top: 12px;
+        padding: 10px 16px;
+        background: none;
+        color: #64748b;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font-size: 14px;
+        cursor: pointer;
+    }
+    .suggestions {
+        border: 1px solid #cbd5e1;
+        border-top: none;
+        border-radius: 0 0 8px 8px;
+        max-height: 160px;
+        overflow-y: auto;
+        background: #fff;
+        position: relative;
+    }
+    .suggestion-item { padding: 8px 10px; font-size: 13px; cursor: pointer; }
+    .suggestion-item:hover { background: #f1f5f9; }
+    #map { height: 420px; border-radius: 12px; }
+    .expense-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #eef2f7; }
+    .expense-row:last-child { border-bottom: none; }
+    .expense-cat { font-size: 12px; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 999px; flex-shrink: 0; }
+    .expense-desc { flex: 1; font-size: 14px; }
+    .expense-amount { font-weight: 600; font-size: 14px; flex-shrink: 0; }
+    .totals { display: flex; justify-content: space-between; font-weight: 700; font-size: 16px; margin-top: 8px; padding-top: 8px; border-top: 2px solid #0f172a; }
+    .modal-overlay {
+        display: none;
+        position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+        align-items: center; justify-content: center; z-index: 1000; padding: 16px;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal { background: #fff; border-radius: 12px; padding: 20px; width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto; }
+    .modal h2 { margin-top: 0; font-size: 17px; }
+    .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+    .modal-actions button { flex: 1; }
+    .toast {
+        position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+        background: #0f172a; color: #fff; padding: 10px 18px; border-radius: 999px;
+        font-size: 13px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 2000;
+    }
+    .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<header>
+    <h1>🧳 TripPlanner</h1>
+    <div class="room-badge" id="room-badge"></div>
+    <select id="trip-select" onchange="onTripSelectChange()"></select>
+    <div class="spacer"></div>
+    <button onclick="openTripModal()">+ 新しい旅行</button>
+    <button onclick="loadTrips(true)">更新</button>
+</header>
+
+<div class="container" id="app">
+    <div class="empty-state" id="empty-state">
+        旅行がまだありません。「+ 新しい旅行」から作成してください。
+    </div>
+
+    <div id="trip-view" style="display:none;">
+        <div class="tabs">
+            <button class="active" data-tab="itinerary" onclick="switchTab('itinerary')">📅 旅程</button>
+            <button data-tab="map" onclick="switchTab('map')">🗺️ 地図</button>
+            <button data-tab="budget" onclick="switchTab('budget')">💰 予算</button>
+        </div>
+
+        <div class="panel active" id="panel-itinerary">
+            <div class="day-tabs" id="day-tabs"></div>
+            <div class="card">
+                <div id="item-list"></div>
+                <button class="primary" onclick="openItemModal()">+ 予定を追加</button>
+                <button class="ghost" onclick="addDay()">+ 日を追加</button>
+            </div>
+        </div>
+
+        <div class="panel" id="panel-map">
+            <div class="card">
+                <div id="map"></div>
+            </div>
+        </div>
+
+        <div class="panel" id="panel-budget">
+            <div class="card">
+                <div id="expense-list"></div>
+                <div class="totals" id="expense-totals"></div>
+                <button class="primary" onclick="openExpenseModal()">+ 支出を追加</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 旅行作成モーダル -->
+<div class="modal-overlay" id="trip-modal">
+    <div class="modal">
+        <h2>新しい旅行</h2>
+        <label>旅行名</label>
+        <input type="text" id="trip-title" placeholder="例: 沖縄旅行">
+        <div class="row2">
+            <div><label>開始日</label><input type="date" id="trip-start"></div>
+            <div><label>終了日</label><input type="date" id="trip-end"></div>
+        </div>
+        <div class="modal-actions">
+            <button class="ghost" onclick="closeModal('trip-modal')">キャンセル</button>
+            <button class="primary" onclick="createTrip()">作成</button>
+        </div>
+    </div>
+</div>
+
+<!-- 予定追加/編集モーダル -->
+<div class="modal-overlay" id="item-modal">
+    <div class="modal">
+        <h2 id="item-modal-title">予定を追加</h2>
+        <input type="hidden" id="item-id">
+        <div class="row2">
+            <div><label>時刻</label><input type="time" id="item-time"></div>
+            <div><label>タイトル</label><input type="text" id="item-title" placeholder="例: 美ら海水族館"></div>
+        </div>
+        <label>場所を検索</label>
+        <input type="text" id="item-place-search" placeholder="地名を入力して検索" oninput="onPlaceSearchInput()">
+        <div class="suggestions" id="place-suggestions" style="display:none;"></div>
+        <div id="item-place-selected" style="font-size:13px; color:#0369a1; margin-top:6px;"></div>
+        <label>メモ</label>
+        <textarea id="item-notes" rows="2"></textarea>
+        <div class="modal-actions">
+            <button class="ghost" onclick="closeModal('item-modal')">キャンセル</button>
+            <button class="primary" onclick="saveItem()">保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- 支出追加/編集モーダル -->
+<div class="modal-overlay" id="expense-modal">
+    <div class="modal">
+        <h2 id="expense-modal-title">支出を追加</h2>
+        <input type="hidden" id="expense-id">
+        <label>カテゴリ</label>
+        <input type="text" id="expense-category" placeholder="例: 交通・宿泊・食事">
+        <label>内容</label>
+        <input type="text" id="expense-desc" placeholder="例: 航空券">
+        <div class="row2">
+            <div><label>金額</label><input type="number" id="expense-amount" placeholder="0"></div>
+            <div><label>通貨</label><input type="text" id="expense-currency" value="JPY"></div>
+        </div>
+        <div class="modal-actions">
+            <button class="ghost" onclick="closeModal('expense-modal')">キャンセル</button>
+            <button class="primary" onclick="saveExpense()">保存</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const room = params.get('room') || localStorage.getItem('tripPlannerLastRoom');
+if (!room) {
+    window.location.href = '/';
+    throw new Error('room not set, redirecting to login');
+}
+document.getElementById('room-badge').textContent = '👥 ' + room;
+
+let trips = [];
+let currentTripId = null;
+let currentDayIndex = 0;
+let activeTab = 'itinerary';
+let map = null;
+let mapLayer = null;
+let selectedPlace = null;
+let saveTimer = null;
+
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+function uid() {
+    return (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2));
+}
+
+// ── データ読込・保存 ──────────────────────────────────────
+async function loadTrips(silent) {
+    try {
+        const res = await fetch(`/api/${encodeURIComponent(room)}/trips`);
+        if (!res.ok) throw new Error('failed');
+        trips = await res.json();
+        if (!currentTripId && trips.length > 0) currentTripId = trips[0].id;
+        renderTripSelect();
+        renderAll();
+        if (!silent) showToast('読み込みました');
+    } catch (e) {
+        showToast('データの読み込みに失敗しました');
+    }
+}
+
+function scheduleSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveTrips, 600);
+}
+
+async function saveTrips() {
+    try {
+        await fetch(`/api/${encodeURIComponent(room)}/trips`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(trips)
+        });
+    } catch (e) {
+        showToast('保存に失敗しました');
+    }
+}
+
+function currentTrip() {
+    return trips.find(t => t.id === currentTripId) || null;
+}
+
+// ── 旅行の作成・切替 ──────────────────────────────────────
+function openTripModal() {
+    document.getElementById('trip-title').value = '';
+    document.getElementById('trip-start').value = '';
+    document.getElementById('trip-end').value = '';
+    document.getElementById('trip-modal').classList.add('active');
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+}
+
+function dateRange(start, end) {
+    const days = [];
+    let d = new Date(start + 'T00:00:00');
+    const endD = new Date(end + 'T00:00:00');
+    if (isNaN(d) || isNaN(endD) || d > endD) return [{date: start || todayStr(), items: []}];
+    while (d <= endD) {
+        days.push({date: d.toISOString().slice(0, 10), items: []});
+        d.setDate(d.getDate() + 1);
+    }
+    return days;
+}
+
+function todayStr() {
+    return new Date().toISOString().slice(0, 10);
+}
+
+function createTrip() {
+    const title = document.getElementById('trip-title').value.trim();
+    const start = document.getElementById('trip-start').value || todayStr();
+    const end = document.getElementById('trip-end').value || start;
+    if (!title) { showToast('旅行名を入力してください'); return; }
+    const trip = {
+        id: uid(),
+        title,
+        startDate: start,
+        endDate: end,
+        days: dateRange(start, end),
+        expenses: []
+    };
+    trips.push(trip);
+    currentTripId = trip.id;
+    currentDayIndex = 0;
+    closeModal('trip-modal');
+    renderTripSelect();
+    renderAll();
+    scheduleSave();
+    showToast('旅行を作成しました');
+}
+
+function renderTripSelect() {
+    const sel = document.getElementById('trip-select');
+    sel.innerHTML = '';
+    trips.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = t.title;
+        sel.appendChild(opt);
+    });
+    if (currentTripId) sel.value = currentTripId;
+    document.getElementById('empty-state').style.display = trips.length === 0 ? 'block' : 'none';
+    document.getElementById('trip-view').style.display = trips.length === 0 ? 'none' : 'block';
+}
+
+function onTripSelectChange() {
+    currentTripId = document.getElementById('trip-select').value;
+    currentDayIndex = 0;
+    renderAll();
+}
+
+function addDay() {
+    const trip = currentTrip();
+    if (!trip) return;
+    const last = trip.days[trip.days.length - 1];
+    let next = todayStr();
+    if (last) {
+        const d = new Date(last.date + 'T00:00:00');
+        d.setDate(d.getDate() + 1);
+        next = d.toISOString().slice(0, 10);
+    }
+    trip.days.push({date: next, items: []});
+    currentDayIndex = trip.days.length - 1;
+    renderAll();
+    scheduleSave();
+}
+
+// ── タブ切り替え ──────────────────────────────────────────
+function switchTab(tab) {
+    activeTab = tab;
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    document.getElementById('panel-itinerary').classList.toggle('active', tab === 'itinerary');
+    document.getElementById('panel-map').classList.toggle('active', tab === 'map');
+    document.getElementById('panel-budget').classList.toggle('active', tab === 'budget');
+    if (tab === 'map') {
+        setTimeout(renderMap, 50);
+    }
+}
+
+// ── 全体再描画 ────────────────────────────────────────────
+function renderAll() {
+    renderDayTabs();
+    renderItems();
+    renderExpenses();
+    if (activeTab === 'map') renderMap();
+}
+
+function renderDayTabs() {
+    const trip = currentTrip();
+    const el = document.getElementById('day-tabs');
+    el.innerHTML = '';
+    if (!trip) return;
+    trip.days.forEach((day, i) => {
+        const btn = document.createElement('button');
+        btn.textContent = day.date;
+        btn.className = i === currentDayIndex ? 'active' : '';
+        btn.onclick = () => { currentDayIndex = i; renderAll(); };
+        el.appendChild(btn);
+    });
+}
+
+function renderItems() {
+    const trip = currentTrip();
+    const el = document.getElementById('item-list');
+    el.innerHTML = '';
+    if (!trip || !trip.days[currentDayIndex]) return;
+    const items = trip.days[currentDayIndex].items;
+    if (items.length === 0) {
+        el.innerHTML = '<p style="color:#94a3b8; font-size:14px;">この日の予定はまだありません</p>';
+        return;
+    }
+    items.forEach((item, idx) => {
+        const row = document.createElement('div');
+        row.className = 'item-row';
+        row.innerHTML = `
+            <div class="item-time">${item.time || ''}</div>
+            <div class="item-body">
+                <div class="item-title">${escapeHtml(item.title || '')}</div>
+                ${item.place ? `<div class="item-place">📍 ${escapeHtml(item.place)}</div>` : ''}
+                ${item.notes ? `<div class="item-notes">${escapeHtml(item.notes)}</div>` : ''}
+            </div>
+            <div class="item-actions">
+                <button class="icon-btn" title="上へ" onclick="moveItem(${idx}, -1)">↑</button>
+                <button class="icon-btn" title="下へ" onclick="moveItem(${idx}, 1)">↓</button>
+                <button class="icon-btn" title="編集" onclick="editItem('${item.id}')">✏️</button>
+                <button class="icon-btn" title="削除" onclick="deleteItem('${item.id}')">🗑️</button>
+            </div>
+        `;
+        el.appendChild(row);
+    });
+}
+
+function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function moveItem(idx, dir) {
+    const trip = currentTrip();
+    const items = trip.days[currentDayIndex].items;
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= items.length) return;
+    [items[idx], items[newIdx]] = [items[newIdx], items[idx]];
+    renderItems();
+    scheduleSave();
+}
+
+// ── 予定モーダル ──────────────────────────────────────────
+let geocodeTimer = null;
+
+function openItemModal() {
+    document.getElementById('item-modal-title').textContent = '予定を追加';
+    document.getElementById('item-id').value = '';
+    document.getElementById('item-time').value = '';
+    document.getElementById('item-title').value = '';
+    document.getElementById('item-notes').value = '';
+    document.getElementById('item-place-search').value = '';
+    document.getElementById('item-place-selected').textContent = '';
+    document.getElementById('place-suggestions').style.display = 'none';
+    selectedPlace = null;
+    document.getElementById('item-modal').classList.add('active');
+}
+
+function editItem(id) {
+    const trip = currentTrip();
+    const item = trip.days[currentDayIndex].items.find(i => i.id === id);
+    if (!item) return;
+    document.getElementById('item-modal-title').textContent = '予定を編集';
+    document.getElementById('item-id').value = item.id;
+    document.getElementById('item-time').value = item.time || '';
+    document.getElementById('item-title').value = item.title || '';
+    document.getElementById('item-notes').value = item.notes || '';
+    document.getElementById('item-place-search').value = item.place || '';
+    document.getElementById('item-place-selected').textContent = item.place ? `選択中: ${item.place}` : '';
+    document.getElementById('place-suggestions').style.display = 'none';
+    selectedPlace = item.place ? {display_name: item.place, lat: item.lat, lon: item.lng} : null;
+    document.getElementById('item-modal').classList.add('active');
+}
+
+function onPlaceSearchInput() {
+    clearTimeout(geocodeTimer);
+    selectedPlace = null;
+    document.getElementById('item-place-selected').textContent = '';
+    const q = document.getElementById('item-place-search').value.trim();
+    const box = document.getElementById('place-suggestions');
+    if (q.length < 2) { box.style.display = 'none'; box.innerHTML = ''; return; }
+    geocodeTimer = setTimeout(async () => {
+        try {
+            const res = await fetch(`/api/geocode?q=${encodeURIComponent(q)}`);
+            const results = await res.json();
+            box.innerHTML = '';
+            if (!Array.isArray(results) || results.length === 0) {
+                box.style.display = 'none';
+                return;
+            }
+            results.forEach(r => {
+                const div = document.createElement('div');
+                div.className = 'suggestion-item';
+                div.textContent = r.display_name;
+                div.onclick = () => {
+                    selectedPlace = r;
+                    document.getElementById('item-place-search').value = r.display_name;
+                    document.getElementById('item-place-selected').textContent = `選択中: ${r.display_name}`;
+                    box.style.display = 'none';
+                };
+                box.appendChild(div);
+            });
+            box.style.display = 'block';
+        } catch (e) { /* 検索失敗時は無視 */ }
+    }, 500);
+}
+
+function saveItem() {
+    const trip = currentTrip();
+    if (!trip) return;
+    const id = document.getElementById('item-id').value;
+    const time = document.getElementById('item-time').value;
+    const title = document.getElementById('item-title').value.trim();
+    const notes = document.getElementById('item-notes').value.trim();
+    if (!title) { showToast('タイトルを入力してください'); return; }
+    const place = selectedPlace ? selectedPlace.display_name : document.getElementById('item-place-search').value.trim();
+    const lat = selectedPlace ? selectedPlace.lat : null;
+    const lng = selectedPlace ? selectedPlace.lon : null;
+
+    const items = trip.days[currentDayIndex].items;
+    if (id) {
+        const item = items.find(i => i.id === id);
+        Object.assign(item, {time, title, notes, place, lat, lng});
+    } else {
+        items.push({id: uid(), time, title, notes, place, lat, lng});
+    }
+    items.sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
+    closeModal('item-modal');
+    renderAll();
+    scheduleSave();
+}
+
+function deleteItem(id) {
+    const trip = currentTrip();
+    trip.days[currentDayIndex].items = trip.days[currentDayIndex].items.filter(i => i.id !== id);
+    renderAll();
+    scheduleSave();
+}
+
+// ── 地図 ──────────────────────────────────────────────────
+function renderMap() {
+    const trip = currentTrip();
+    if (!trip) return;
+    if (!map) {
+        map = L.map('map').setView([35.681236, 139.767125], 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+    } else {
+        map.invalidateSize();
+    }
+    if (mapLayer) mapLayer.remove();
+    mapLayer = L.layerGroup().addTo(map);
+
+    const items = (trip.days[currentDayIndex] ? trip.days[currentDayIndex].items : [])
+        .filter(i => i.lat != null && i.lng != null);
+
+    if (items.length === 0) return;
+
+    const latlngs = items.map(i => [i.lat, i.lng]);
+    items.forEach((item, idx) => {
+        L.marker([item.lat, item.lng])
+            .addTo(mapLayer)
+            .bindPopup(`<strong>${idx + 1}. ${escapeHtml(item.title)}</strong><br>${escapeHtml(item.place || '')}`);
+    });
+    L.polyline(latlngs, {color: '#0ea5e9', weight: 3, dashArray: '6 6'}).addTo(mapLayer);
+    map.fitBounds(latlngs, {padding: [30, 30]});
+}
+
+// ── 予算 ──────────────────────────────────────────────────
+function openExpenseModal() {
+    document.getElementById('expense-modal-title').textContent = '支出を追加';
+    document.getElementById('expense-id').value = '';
+    document.getElementById('expense-category').value = '';
+    document.getElementById('expense-desc').value = '';
+    document.getElementById('expense-amount').value = '';
+    document.getElementById('expense-currency').value = 'JPY';
+    document.getElementById('expense-modal').classList.add('active');
+}
+
+function editExpense(id) {
+    const trip = currentTrip();
+    const exp = trip.expenses.find(e => e.id === id);
+    if (!exp) return;
+    document.getElementById('expense-modal-title').textContent = '支出を編集';
+    document.getElementById('expense-id').value = exp.id;
+    document.getElementById('expense-category').value = exp.category || '';
+    document.getElementById('expense-desc').value = exp.description || '';
+    document.getElementById('expense-amount').value = exp.amount;
+    document.getElementById('expense-currency').value = exp.currency || 'JPY';
+    document.getElementById('expense-modal').classList.add('active');
+}
+
+function saveExpense() {
+    const trip = currentTrip();
+    if (!trip) return;
+    const id = document.getElementById('expense-id').value;
+    const category = document.getElementById('expense-category').value.trim() || 'その他';
+    const description = document.getElementById('expense-desc').value.trim();
+    const amount = parseFloat(document.getElementById('expense-amount').value) || 0;
+    const currency = document.getElementById('expense-currency').value.trim() || 'JPY';
+    if (!trip.expenses) trip.expenses = [];
+    if (id) {
+        const exp = trip.expenses.find(e => e.id === id);
+        Object.assign(exp, {category, description, amount, currency});
+    } else {
+        trip.expenses.push({id: uid(), category, description, amount, currency});
+    }
+    closeModal('expense-modal');
+    renderExpenses();
+    scheduleSave();
+}
+
+function deleteExpense(id) {
+    const trip = currentTrip();
+    trip.expenses = trip.expenses.filter(e => e.id !== id);
+    renderExpenses();
+    scheduleSave();
+}
+
+function renderExpenses() {
+    const trip = currentTrip();
+    const el = document.getElementById('expense-list');
+    const totalsEl = document.getElementById('expense-totals');
+    el.innerHTML = '';
+    totalsEl.innerHTML = '';
+    if (!trip) return;
+    const expenses = trip.expenses || [];
+    if (expenses.length === 0) {
+        el.innerHTML = '<p style="color:#94a3b8; font-size:14px;">支出はまだありません</p>';
+        return;
+    }
+    expenses.forEach(exp => {
+        const row = document.createElement('div');
+        row.className = 'expense-row';
+        row.innerHTML = `
+            <div class="expense-cat">${escapeHtml(exp.category)}</div>
+            <div class="expense-desc">${escapeHtml(exp.description || '')}</div>
+            <div class="expense-amount">${exp.amount.toLocaleString()} ${escapeHtml(exp.currency)}</div>
+            <div class="item-actions">
+                <button class="icon-btn" onclick="editExpense('${exp.id}')">✏️</button>
+                <button class="icon-btn" onclick="deleteExpense('${exp.id}')">🗑️</button>
+            </div>
+        `;
+        el.appendChild(row);
+    });
+
+    const byCurrency = {};
+    expenses.forEach(e => { byCurrency[e.currency] = (byCurrency[e.currency] || 0) + e.amount; });
+    const totalStr = Object.entries(byCurrency).map(([cur, amt]) => `${amt.toLocaleString()} ${cur}`).join(' + ');
+    totalsEl.innerHTML = `<span>合計</span><span>${totalStr}</span>`;
+}
+
+// ── 初期化 ────────────────────────────────────────────────
+loadTrips(true);
+</script>
+</body>
+</html>
