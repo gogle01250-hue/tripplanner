@@ -170,6 +170,21 @@
     .modal h2 { margin-top: 0; font-size: 17px; color: var(--tp-text); }
     .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
     .modal-actions button { flex: 1; }
+    .choice-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 6px; }
+    .choice-card {
+        background: var(--tp-bg);
+        border: 1px solid var(--tp-border);
+        border-radius: 16px;
+        padding: 16px 10px;
+        text-align: center;
+        cursor: pointer;
+    }
+    .choice-card:hover { background: var(--tp-accent-soft); }
+    .choice-card.featured { border: 2px solid var(--tp-accent); background: var(--tp-accent-soft); }
+    .choice-card .icon { font-size: 26px; }
+    .choice-card .label { font-weight: 700; font-size: 13px; margin-top: 8px; color: var(--tp-text); }
+    .choice-card .desc { font-size: 11px; color: var(--tp-text-muted); margin-top: 4px; }
+    .ai-loading { display: none; text-align: center; color: var(--tp-text-muted); font-size: 13px; margin-top: 10px; }
     .toast {
         position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
         background: var(--tp-text); color: #FBF3E7; padding: 10px 18px; border-radius: 999px;
@@ -184,7 +199,7 @@
     <div class="room-badge" id="room-badge"></div>
     <select id="trip-select" onchange="onTripSelectChange()"></select>
     <div class="spacer"></div>
-    <button onclick="openTripModal()">+ 新しい旅行</button>
+    <button onclick="openCreateChoiceModal()">+ 新しい旅行</button>
     <button onclick="loadTrips(true)">更新</button>
 </header>
 
@@ -216,7 +231,35 @@
     </div>
 </div>
 
-<!-- 旅行作成モーダル -->
+<!-- 旅行の作り方を選ぶモーダル -->
+<div class="modal-overlay" id="create-choice-modal">
+    <div class="modal">
+        <h2>新しい旅行を作る</h2>
+        <p style="font-size:13px; color:var(--tp-text-muted); margin:0 0 4px;">作り方を選んでください</p>
+        <div class="choice-cards">
+            <div class="choice-card" onclick="chooseCreateMethod('manual')">
+                <div class="icon">📝</div>
+                <div class="label">手動で入力</div>
+                <div class="desc">旅行名と日程を自分で決める</div>
+            </div>
+            <div class="choice-card featured" onclick="chooseCreateMethod('ai')">
+                <div class="icon">✨</div>
+                <div class="label">AIに考えてもらう</div>
+                <div class="desc">行き先ややりたい事を伝えるだけ</div>
+            </div>
+            <div class="choice-card" onclick="chooseCreateMethod('import')">
+                <div class="icon">📄</div>
+                <div class="label">ファイルから取り込む</div>
+                <div class="desc">既存のしおり(Excel/画像/PDF)を読み込む</div>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="ghost" onclick="closeModal('create-choice-modal')">キャンセル</button>
+        </div>
+    </div>
+</div>
+
+<!-- 旅行作成モーダル（手動） -->
 <div class="modal-overlay" id="trip-modal">
     <div class="modal">
         <h2>新しい旅行</h2>
@@ -229,6 +272,38 @@
         <div class="modal-actions">
             <button class="ghost" onclick="closeModal('trip-modal')">キャンセル</button>
             <button class="primary" onclick="createTrip()">作成</button>
+        </div>
+    </div>
+</div>
+
+<!-- AI旅程提案モーダル -->
+<div class="modal-overlay" id="ai-suggest-modal">
+    <div class="modal">
+        <h2>✨ AIに旅程を考えてもらう</h2>
+        <label>行き先・やりたいこと</label>
+        <textarea id="ai-prompt" rows="3" placeholder="例: 沖縄で3泊4日、ビーチと美ら海水族館に行きたい"></textarea>
+        <div class="row2">
+            <div><label>開始日（任意）</label><input type="date" id="ai-start"></div>
+            <div><label>終了日（任意）</label><input type="date" id="ai-end"></div>
+        </div>
+        <div class="ai-loading">✨ AIが旅程を考えています…</div>
+        <div class="modal-actions">
+            <button class="ghost" onclick="closeModal('ai-suggest-modal')">キャンセル</button>
+            <button class="primary" onclick="submitAiSuggest()">生成する</button>
+        </div>
+    </div>
+</div>
+
+<!-- しおりファイル取り込みモーダル -->
+<div class="modal-overlay" id="import-modal">
+    <div class="modal">
+        <h2>📄 しおりファイルから取り込む</h2>
+        <label>ファイルを選択（Excel / 画像 / PDF）</label>
+        <input type="file" id="import-file" accept=".xlsx,.png,.jpg,.jpeg,.pdf">
+        <div class="ai-loading">📄 内容を読み取っています…</div>
+        <div class="modal-actions">
+            <button class="ghost" onclick="closeModal('import-modal')">キャンセル</button>
+            <button class="primary" onclick="submitImport()">取り込む</button>
         </div>
     </div>
 </div>
@@ -346,6 +421,123 @@ function openTripModal() {
 
 function closeModal(id) {
     document.getElementById(id).classList.remove('active');
+}
+
+// ── 旅行作成方法の選択 & AI連携 ────────────────────────────
+function openCreateChoiceModal() {
+    document.getElementById('create-choice-modal').classList.add('active');
+}
+
+function chooseCreateMethod(method) {
+    closeModal('create-choice-modal');
+    if (method === 'manual') openTripModal();
+    else if (method === 'ai') openAiSuggestModal();
+    else if (method === 'import') openImportModal();
+}
+
+function setModalLoading(modalId, loading) {
+    const modal = document.getElementById(modalId);
+    modal.querySelectorAll('button').forEach(b => b.disabled = loading);
+    const loadingEl = modal.querySelector('.ai-loading');
+    if (loadingEl) loadingEl.style.display = loading ? 'block' : 'none';
+}
+
+function normalizeAiTrip(title, rawDays) {
+    const days = (rawDays || []).map(d => ({
+        date: d.date || todayStr(),
+        items: (d.items || []).map(it => ({
+            id: uid(),
+            time: it.time || '',
+            title: it.title || '',
+            place: it.place || '',
+            lat: it.lat != null ? it.lat : null,
+            lng: it.lng != null ? it.lng : null,
+            notes: it.notes || '',
+            transport: {
+                car: !!(it.transport && it.transport.car),
+                train: !!(it.transport && it.transport.train),
+                plane: !!(it.transport && it.transport.plane),
+                other: !!(it.transport && it.transport.other),
+                otherLabel: (it.transport && it.transport.otherLabel) || ''
+            },
+            cost: it.cost != null ? it.cost : null,
+            costCurrency: it.costCurrency || 'JPY'
+        }))
+    }));
+    if (days.length === 0) days.push({date: todayStr(), items: []});
+    return {
+        id: uid(),
+        title: title || '新しい旅行',
+        startDate: days[0].date,
+        endDate: days[days.length - 1].date,
+        days
+    };
+}
+
+function addAiTrip(title, rawDays) {
+    const trip = normalizeAiTrip(title, rawDays);
+    trips.push(trip);
+    currentTripId = trip.id;
+    currentDayIndex = 0;
+    renderTripSelect();
+    renderAll();
+    scheduleSave();
+}
+
+function openAiSuggestModal() {
+    document.getElementById('ai-prompt').value = '';
+    document.getElementById('ai-start').value = '';
+    document.getElementById('ai-end').value = '';
+    document.getElementById('ai-suggest-modal').classList.add('active');
+}
+
+async function submitAiSuggest() {
+    const prompt = document.getElementById('ai-prompt').value.trim();
+    if (!prompt) { showToast('行き先ややりたいことを入力してください'); return; }
+    const start_date = document.getElementById('ai-start').value;
+    const end_date = document.getElementById('ai-end').value;
+    setModalLoading('ai-suggest-modal', true);
+    try {
+        const res = await fetch('/api/ai/suggest', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({prompt, start_date, end_date})
+        });
+        const data = await res.json();
+        if (!data.ok) { showToast(data.error || 'AI生成に失敗しました'); return; }
+        addAiTrip(data.title, data.days);
+        closeModal('ai-suggest-modal');
+        showToast('旅行を作成しました');
+    } catch (e) {
+        showToast('通信エラーが発生しました');
+    } finally {
+        setModalLoading('ai-suggest-modal', false);
+    }
+}
+
+function openImportModal() {
+    document.getElementById('import-file').value = '';
+    document.getElementById('import-modal').classList.add('active');
+}
+
+async function submitImport() {
+    const fileInput = document.getElementById('import-file');
+    if (!fileInput.files || fileInput.files.length === 0) { showToast('ファイルを選択してください'); return; }
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    setModalLoading('import-modal', true);
+    try {
+        const res = await fetch('/api/ai/import', {method: 'POST', body: formData});
+        const data = await res.json();
+        if (!data.ok) { showToast(data.error || '取り込みに失敗しました'); return; }
+        addAiTrip(data.title, data.days);
+        closeModal('import-modal');
+        showToast('旅行を取り込みました');
+    } catch (e) {
+        showToast('通信エラーが発生しました');
+    } finally {
+        setModalLoading('import-modal', false);
+    }
 }
 
 function dateRange(start, end) {

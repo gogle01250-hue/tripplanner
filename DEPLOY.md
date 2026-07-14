@@ -42,6 +42,18 @@ CREATE TABLE IF NOT EXISTS rooms (
 
 ---
 
+## Step 1.5: Gemini APIキーを取得する（AI機能用）
+
+「AIに旅程を考えてもらう」「しおりファイルから取り込む」機能で使用。無料・クレジットカード登録不要。
+
+1. https://aistudio.google.com/apikey にアクセス（Googleアカウントでログイン）
+2. **Create API key** をクリック
+3. 表示されたキーをコピー
+
+→ これが `GEMINI_API_KEY` になる（後でRenderに貼り付ける）
+
+---
+
 ## Step 2: GitHubにコードをプッシュ
 
 ### リポジトリ構成（最終形）
@@ -80,6 +92,7 @@ git push -u origin main
    | Key | Value |
    |-----|-------|
    | `DATABASE_URL` | Supabaseでコピーしたpostgresql://... の文字列 |
+   | `GEMINI_API_KEY` | Google AI Studioで発行したAPIキー |
 5. **Deploy** をクリック
 
 → デプロイ完了後、`https://あなたのサービス名.onrender.com` でアクセス可能
