@@ -191,7 +191,7 @@ TRIP_SCHEMA = {
                             "properties": {
                                 "time": {"type": "STRING", "description": "HH:MM形式。不明なら空文字"},
                                 "title": {"type": "STRING"},
-                                "place": {"type": "STRING", "description": "地図検索できる具体的な場所名・施設名・住所"},
+                                "place": {"type": "STRING", "description": "地図検索エンジン（OpenStreetMap）でヒットする、シンプルで一般に知られた施設名・地名のみ。番地までの詳細住所や説明的な言葉は含めない（良い例: 「清水寺」「伏見稲荷大社」「京都駅」。悪い例: 「京都府京都市東山区清水1-294」「清水寺 参拝」）"},
                                 "notes": {"type": "STRING"},
                                 "transport_car": {"type": "BOOLEAN"},
                                 "transport_train": {"type": "BOOLEAN"},
@@ -281,7 +281,7 @@ async def ai_suggest(request: Request):
 
     instruction = (
         "あなたは旅行プランナーです。以下の希望をもとに、日本語で具体的な旅行のしおりをJSON形式で作成してください。"
-        "各予定のplaceには、地図検索できるよう具体的な場所名・施設名・住所を入れてください。"
+        "各予定のplaceには、番地までの詳細住所ではなく、地図検索でヒットするシンプルな施設名・地名のみを入れてください（例:「清水寺」）。"
         f"\n\n希望: {prompt}"
     )
     if start_date:
@@ -305,7 +305,7 @@ async def ai_import(file: UploadFile = File(...)):
     filename = (file.filename or "").lower()
     instruction = (
         "この旅のしおりの内容を、日本語で旅行データとしてJSON形式で抽出してください。"
-        "各予定のplaceには、地図検索できるよう具体的な場所名・施設名・住所を入れてください。"
+        "各予定のplaceには、番地までの詳細住所ではなく、地図検索でヒットするシンプルな施設名・地名のみを入れてください（例:「清水寺」）。"
         "移動を表す項目は、実際に使われている移動手段（車・電車・飛行機・その他）をtransport_*で表してください。"
     )
 
