@@ -55,9 +55,32 @@
     }
     header button { background: rgba(255,255,255,0.3); color: #fff; font-weight: 500; }
     header button:hover { background: rgba(255,255,255,0.45); }
-    .container { max-width: 900px; margin: 0 auto; padding: 16px; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 16px; }
     .empty-state { text-align: center; color: var(--tp-text-muted); padding: 60px 16px; }
-    .section-title { font-size: 14px; font-weight: 700; color: var(--tp-text); margin: 0 0 10px; }
+    .trip-layout { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
+    .trip-sidebar { width: 220px; flex-shrink: 0; }
+    .trip-main { flex: 1; min-width: 280px; }
+    .sidebar-year { font-size: 11px; color: var(--tp-text-muted); font-weight: 500; margin: 14px 0 8px; }
+    .sidebar-year:first-child { margin-top: 0; }
+    .sidebar-card { background: var(--tp-surface); border: 1px solid var(--tp-border); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; cursor: pointer; }
+    .sidebar-card:hover { border-color: var(--tp-accent); }
+    .sidebar-card.active { background: var(--tp-accent); border-color: var(--tp-accent); }
+    .sidebar-card .range { font-size: 11px; color: var(--tp-text-muted); }
+    .sidebar-card.active .range { color: rgba(255,255,255,0.85); }
+    .sidebar-card .name { font-size: 13px; font-weight: 500; color: var(--tp-text); margin-top: 2px; }
+    .sidebar-card.active .name { color: #fff; font-weight: 700; }
+    .trip-title-heading { display: flex; align-items: center; gap: 8px; margin: 4px 0 16px; }
+    .trip-title-heading h2 { font-size: 22px; font-weight: 700; color: var(--tp-accent-dark); margin: 0; }
+    .trip-title-heading input { font-size: 20px; font-weight: 700; color: var(--tp-accent-dark); padding: 4px 10px; }
+    .trip-title-edit-btn { border: none; background: none; cursor: pointer; font-size: 15px; color: var(--tp-text-muted); flex-shrink: 0; }
+    .trip-title-edit-btn:hover { color: var(--tp-accent-dark); }
+    .card-header-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .date-badge { background: var(--tp-accent); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
+    .waypoint-list { margin-top: 6px; }
+    .waypoint-item { display: flex; align-items: center; gap: 8px; background: var(--tp-bg); border-radius: 12px; padding: 8px 10px; margin-bottom: 6px; font-size: 13px; }
+    .waypoint-item .remove { cursor: pointer; color: var(--tp-text-muted); flex-shrink: 0; }
+    .waypoint-item .remove:hover { color: var(--tp-accent-dark); }
+    .section-title { font-size: 14px; font-weight: 700; color: var(--tp-text); margin: 0; }
     .card {
         background: var(--tp-surface);
         border-radius: 18px;
@@ -197,7 +220,6 @@
 <header>
     <h1>🧳 TripPlanner</h1>
     <div class="room-badge" id="room-badge"></div>
-    <select id="trip-select" onchange="onTripSelectChange()"></select>
     <div class="spacer"></div>
     <button onclick="openCreateChoiceModal()">+ 新しい旅行</button>
     <button onclick="loadTrips(true)">更新</button>
@@ -209,24 +231,33 @@
     </div>
 
     <div id="trip-view" style="display:none;">
-        <div class="day-tabs" id="day-tabs"></div>
+        <div class="trip-layout">
+            <div class="trip-sidebar" id="trip-sidebar"></div>
+            <div class="trip-main">
+                <div class="trip-title-heading" id="trip-title-heading"></div>
 
-        <div class="card">
-            <div class="section-title">📅 旅程</div>
-            <div id="item-list"></div>
-            <button class="primary" onclick="openItemModal()">+ 予定を追加</button>
-            <button class="ghost" onclick="addDay()">+ 日を追加</button>
-        </div>
+                <div class="card">
+                    <div class="card-header-row">
+                        <div class="section-title">📅 旅程</div>
+                        <span class="date-badge" id="current-date-badge"></span>
+                    </div>
+                    <div class="day-tabs" id="day-tabs"></div>
+                    <button class="primary" onclick="openItemModal()">+ 予定を追加</button>
+                    <button class="ghost" onclick="addDay()">+ 日を追加</button>
+                    <div id="item-list"></div>
+                </div>
 
-        <div class="card">
-            <div class="section-title">🗺️ 地図</div>
-            <div id="map"></div>
-        </div>
+                <div class="card">
+                    <div class="card-header-row"><div class="section-title">🗺️ 地図</div></div>
+                    <div id="map"></div>
+                </div>
 
-        <div class="card">
-            <div class="section-title">💰 予算</div>
-            <div class="totals-row" id="day-total"></div>
-            <div class="totals-row grand" id="trip-total"></div>
+                <div class="card">
+                    <div class="card-header-row"><div class="section-title">💰 予算</div></div>
+                    <div class="totals-row" id="day-total"></div>
+                    <div class="totals-row grand" id="trip-total"></div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -324,12 +355,19 @@
 
         <label>前の予定からの移動手段</label>
         <div class="transport-options">
-            <label class="transport-option"><input type="checkbox" id="transport-car"> 🚗 車</label>
+            <label class="transport-option"><input type="checkbox" id="transport-car" onchange="toggleWaypointSection()"> 🚗 車</label>
             <label class="transport-option"><input type="checkbox" id="transport-train"> 🚆 電車</label>
             <label class="transport-option"><input type="checkbox" id="transport-plane"> ✈️ 飛行機</label>
             <label class="transport-option"><input type="checkbox" id="transport-other" onchange="toggleOtherLabel()"> 🔹 その他</label>
         </div>
         <input type="text" id="transport-other-label" placeholder="その他の移動手段（自由記入）" style="display:none; margin-top:6px;">
+
+        <div id="waypoint-section" style="display:none;">
+            <label>経由地（IC・JCTなど、任意）</label>
+            <input type="text" id="waypoint-search" placeholder="地名・IC名を入力して検索" oninput="onWaypointSearchInput()">
+            <div class="suggestions" id="waypoint-suggestions" style="display:none;"></div>
+            <div class="waypoint-list" id="waypoint-list"></div>
+        </div>
 
         <div class="row2">
             <div><label>金額</label><input type="number" id="item-cost" placeholder="0"></div>
@@ -382,7 +420,7 @@ async function loadTrips(silent) {
         if (!res.ok) throw new Error('failed');
         trips = await res.json();
         if (!currentTripId && trips.length > 0) currentTripId = trips[0].id;
-        renderTripSelect();
+        renderTripSidebar();
         renderAll();
         if (!silent) showToast('読み込みました');
     } catch (e) {
@@ -479,7 +517,7 @@ function addAiTrip(title, rawDays) {
     trips.push(trip);
     currentTripId = trip.id;
     currentDayIndex = 0;
-    renderTripSelect();
+    renderTripSidebar();
     renderAll();
     scheduleSave();
 }
@@ -572,30 +610,85 @@ function createTrip() {
     currentTripId = trip.id;
     currentDayIndex = 0;
     closeModal('trip-modal');
-    renderTripSelect();
+    renderTripSidebar();
     renderAll();
     scheduleSave();
     showToast('旅行を作成しました');
 }
 
-function renderTripSelect() {
-    const sel = document.getElementById('trip-select');
-    sel.innerHTML = '';
-    trips.forEach(t => {
-        const opt = document.createElement('option');
-        opt.value = t.id;
-        opt.textContent = t.title;
-        sel.appendChild(opt);
+function formatDateRange(start, end) {
+    const fmt = (s) => (s || '').slice(5).replace('-', '/');
+    if (!start) return '';
+    return end && end !== start ? `${fmt(start)} - ${fmt(end)}` : fmt(start);
+}
+
+function renderTripSidebar() {
+    const el = document.getElementById('trip-sidebar');
+    el.innerHTML = '';
+    const sorted = [...trips].sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
+    let lastYear = null;
+    sorted.forEach(t => {
+        const year = (t.startDate || '').slice(0, 4) || '----';
+        if (year !== lastYear) {
+            const yearEl = document.createElement('div');
+            yearEl.className = 'sidebar-year';
+            yearEl.textContent = year + '年';
+            el.appendChild(yearEl);
+            lastYear = year;
+        }
+        const card = document.createElement('div');
+        card.className = 'sidebar-card' + (t.id === currentTripId ? ' active' : '');
+        card.innerHTML = `
+            <div class="range">${formatDateRange(t.startDate, t.endDate)}</div>
+            <div class="name">${escapeHtml(t.title)}</div>
+        `;
+        card.onclick = () => selectTrip(t.id);
+        el.appendChild(card);
     });
-    if (currentTripId) sel.value = currentTripId;
     document.getElementById('empty-state').style.display = trips.length === 0 ? 'block' : 'none';
     document.getElementById('trip-view').style.display = trips.length === 0 ? 'none' : 'block';
 }
 
-function onTripSelectChange() {
-    currentTripId = document.getElementById('trip-select').value;
+function selectTrip(id) {
+    currentTripId = id;
     currentDayIndex = 0;
+    renderTripSidebar();
     renderAll();
+}
+
+function renderTripTitleHeading() {
+    const el = document.getElementById('trip-title-heading');
+    const trip = currentTrip();
+    if (!trip) { el.innerHTML = ''; return; }
+    el.innerHTML = `
+        <h2 id="trip-title-display">${escapeHtml(trip.title)}</h2>
+        <button class="trip-title-edit-btn" onclick="startEditTripTitle()" title="旅行名を編集">✏️</button>
+    `;
+}
+
+function startEditTripTitle() {
+    const trip = currentTrip();
+    if (!trip) return;
+    const el = document.getElementById('trip-title-heading');
+    el.innerHTML = `<input type="text" id="trip-title-input" value="${escapeHtml(trip.title)}">`;
+    const input = document.getElementById('trip-title-input');
+    input.focus();
+    input.select();
+    const commit = () => {
+        const newTitle = input.value.trim();
+        if (newTitle) { trip.title = newTitle; scheduleSave(); }
+        renderTripTitleHeading();
+        renderTripSidebar();
+    };
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
+}
+
+function renderCurrentDateBadge() {
+    const trip = currentTrip();
+    const el = document.getElementById('current-date-badge');
+    if (!trip || !trip.days[currentDayIndex]) { el.textContent = ''; return; }
+    el.textContent = trip.days[currentDayIndex].date;
 }
 
 function addDay() {
@@ -627,7 +720,9 @@ function deleteDay(idx) {
 
 // ── 全体再描画 ────────────────────────────────────────────
 function renderAll() {
+    renderTripTitleHeading();
     renderDayTabs();
+    renderCurrentDateBadge();
     renderItems();
     renderMap();
     renderBudget();
@@ -733,10 +828,64 @@ function moveItem(idx, dir) {
 
 // ── 予定モーダル ──────────────────────────────────────────
 let geocodeTimer = null;
+let waypointGeocodeTimer = null;
+let itemWaypoints = [];
 
 function toggleOtherLabel() {
     const checked = document.getElementById('transport-other').checked;
     document.getElementById('transport-other-label').style.display = checked ? 'block' : 'none';
+}
+
+function toggleWaypointSection() {
+    const checked = document.getElementById('transport-car').checked;
+    document.getElementById('waypoint-section').style.display = checked ? 'block' : 'none';
+}
+
+function renderWaypointList() {
+    const el = document.getElementById('waypoint-list');
+    el.innerHTML = '';
+    itemWaypoints.forEach((wp, idx) => {
+        const div = document.createElement('div');
+        div.className = 'waypoint-item';
+        div.innerHTML = `<span style="flex:1;">${escapeHtml(wp.name)}</span><span class="remove" onclick="removeWaypoint(${idx})">✕</span>`;
+        el.appendChild(div);
+    });
+}
+
+function removeWaypoint(idx) {
+    itemWaypoints.splice(idx, 1);
+    renderWaypointList();
+}
+
+function onWaypointSearchInput() {
+    clearTimeout(waypointGeocodeTimer);
+    const q = document.getElementById('waypoint-search').value.trim();
+    const box = document.getElementById('waypoint-suggestions');
+    if (q.length < 2) { box.style.display = 'none'; box.innerHTML = ''; return; }
+    waypointGeocodeTimer = setTimeout(async () => {
+        try {
+            const res = await fetch(`/api/geocode?q=${encodeURIComponent(q)}`);
+            const results = await res.json();
+            box.innerHTML = '';
+            if (!Array.isArray(results) || results.length === 0) {
+                box.style.display = 'none';
+                return;
+            }
+            results.forEach(r => {
+                const div = document.createElement('div');
+                div.className = 'suggestion-item';
+                div.textContent = r.display_name;
+                div.onclick = () => {
+                    itemWaypoints.push({name: r.display_name, lat: r.lat, lng: r.lon});
+                    renderWaypointList();
+                    document.getElementById('waypoint-search').value = '';
+                    box.style.display = 'none';
+                };
+                box.appendChild(div);
+            });
+            box.style.display = 'block';
+        } catch (e) { /* 検索失敗時は無視 */ }
+    }, 500);
 }
 
 function resetItemModal() {
@@ -756,6 +905,11 @@ function resetItemModal() {
     document.getElementById('item-cost').value = '';
     document.getElementById('item-cost-currency').value = 'JPY';
     selectedPlace = null;
+    itemWaypoints = [];
+    document.getElementById('waypoint-search').value = '';
+    document.getElementById('waypoint-suggestions').style.display = 'none';
+    document.getElementById('waypoint-section').style.display = 'none';
+    renderWaypointList();
 }
 
 function openItemModal() {
@@ -786,6 +940,9 @@ function editItem(id) {
     document.getElementById('transport-other-label').style.display = t.other ? 'block' : 'none';
     document.getElementById('item-cost').value = item.cost != null ? item.cost : '';
     document.getElementById('item-cost-currency').value = item.costCurrency || 'JPY';
+    itemWaypoints = (item.transportWaypoints || []).slice();
+    renderWaypointList();
+    toggleWaypointSection();
     document.getElementById('item-modal').classList.add('active');
 }
 
@@ -844,13 +1001,14 @@ function saveItem() {
     const costRaw = document.getElementById('item-cost').value;
     const cost = costRaw === '' ? null : parseFloat(costRaw);
     const costCurrency = document.getElementById('item-cost-currency').value.trim() || 'JPY';
+    const transportWaypoints = transport.car ? itemWaypoints.slice() : [];
 
     const items = trip.days[currentDayIndex].items;
     if (id) {
         const item = items.find(i => i.id === id);
-        Object.assign(item, {time, title, notes, place, lat, lng, transport, cost, costCurrency});
+        Object.assign(item, {time, title, notes, place, lat, lng, transport, transportWaypoints, cost, costCurrency});
     } else {
-        items.push({id: uid(), time, title, notes, place, lat, lng, transport, cost, costCurrency});
+        items.push({id: uid(), time, title, notes, place, lat, lng, transport, transportWaypoints, cost, costCurrency});
     }
     items.sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
     closeModal('item-modal');
@@ -868,11 +1026,15 @@ function deleteItem(id) {
 // ── 地図 ──────────────────────────────────────────────────
 const _routeCache = {};
 
-async function fetchDrivingRoute(prev, cur) {
-    const key = `${prev.lat},${prev.lng}-${cur.lat},${cur.lng}`;
+async function fetchRouteMultiPoint(points) {
+    const key = points.map(p => `${p.lat},${p.lng}`).join('|');
     if (_routeCache[key]) return _routeCache[key];
     try {
-        const res = await fetch(`/api/route?from_lat=${prev.lat}&from_lng=${prev.lng}&to_lat=${cur.lat}&to_lng=${cur.lng}`);
+        const res = await fetch('/api/route', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({points: points.map(p => [p.lat, p.lng])})
+        });
         const data = await res.json();
         if (!data.ok) return null;
         _routeCache[key] = data;
@@ -938,14 +1100,17 @@ async function renderMap() {
         const prev = items[i - 1];
         const cur = items[i];
         if (cur.transport && cur.transport.car) {
-            const route = await fetchDrivingRoute(prev, cur);
+            const waypoints = cur.transportWaypoints || [];
+            const routePoints = [prev, ...waypoints, cur];
+            const route = await fetchRouteMultiPoint(routePoints);
             if (renderToken !== renderMap._token) return; // 別の描画が始まっていたら中断
             if (route) {
                 const km = (route.distance_m / 1000).toFixed(1);
                 const min = Math.round(route.duration_s / 60);
+                const viaText = waypoints.length ? `（経由: ${waypoints.map(w => escapeHtml(w.name)).join(' → ')}）` : '';
                 L.polyline(route.geometry, {color: transportColor(cur.transport), weight: 4})
                     .addTo(mapLayer)
-                    .bindPopup(`🚗 車移動: ${escapeHtml(prev.place || prev.title)} → ${escapeHtml(cur.place || cur.title)}<br>約${km}km・${min}分`);
+                    .bindPopup(`🚗 車移動: ${escapeHtml(prev.place || prev.title)} → ${escapeHtml(cur.place || cur.title)}${viaText}<br>約${km}km・${min}分`);
                 continue;
             }
         }

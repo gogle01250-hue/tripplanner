@@ -137,17 +137,23 @@ def geocode(q: str):
 _route_cache = {}
 _ROUTE_CACHE_TTL = 86400  # 24時間（同じ2地点間のルートは基本変わらないので長め）
 
-@app.get("/api/route")
-def route(from_lat: float, from_lng: float, to_lat: float, to_lng: float):
-    cache_key = (round(from_lat, 5), round(from_lng, 5), round(to_lat, 5), round(to_lng, 5))
+@app.post("/api/route")
+async def route(request: Request):
+    body = await request.json()
+    points = body.get("points") or []
+    if len(points) < 2:
+        return JSONResponse({"ok": False, "error": "2地点以上の座標が必要です"}, status_code=400)
+
+    cache_key = tuple((round(lat, 5), round(lng, 5)) for lat, lng in points)
     now = time.time()
     cached = _route_cache.get(cache_key)
     if cached and now - cached[0] < _ROUTE_CACHE_TTL:
         return JSONResponse(cached[1])
 
+    coords = ";".join(f"{lng},{lat}" for lat, lng in points)
     try:
         resp = requests.get(
-            f"https://router.project-osrm.org/route/v1/driving/{from_lng},{from_lat};{to_lng},{to_lat}",
+            f"https://router.project-osrm.org/route/v1/driving/{coords}",
             params={"overview": "full", "geometries": "geojson"},
             headers={"User-Agent": "TripPlanner/1.0 (personal travel planning app)"},
             timeout=8,
