@@ -171,7 +171,7 @@ def route(from_lat: float, from_lng: float, to_lat: float, to_lng: float):
 
 # ── AI連携（Gemini） ──────────────────────────────────────
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_MODEL = "gemini-3-flash-preview"
 MAX_IMPORT_SIZE = 10 * 1024 * 1024  # 10MB
 
 TRIP_SCHEMA = {
