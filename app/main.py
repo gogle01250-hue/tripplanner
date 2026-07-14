@@ -107,7 +107,7 @@ def _nominatim_search(q: str, limit: int = 5):
     try:
         resp = requests.get(
             "https://nominatim.openstreetmap.org/search",
-            params={"q": q, "format": "json", "limit": limit},
+            params={"q": q, "format": "json", "limit": limit, "countrycodes": "jp"},
             headers={"User-Agent": "TripPlanner/1.0 (personal travel planning app)"},
             timeout=5,
         )
