@@ -11,15 +11,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
     :root {
-        --tp-bg: #FBF3E7;
-        --tp-surface: #FFFDF9;
-        --tp-text: #3D2F26;
-        --tp-text-muted: #8A7A6D;
-        --tp-accent: #E2725B;
-        --tp-accent-dark: #C65A45;
-        --tp-accent-soft: #F6DDD3;
-        --tp-sage: #8A9A5B;
-        --tp-border: #EAD9C6;
+        --tp-bg: #F1F5EA;
+        --tp-surface: #FCFEFA;
+        --tp-text: #2A331F;
+        --tp-text-muted: #71805F;
+        --tp-accent: #5C8A4A;
+        --tp-accent-dark: #466B38;
+        --tp-accent-soft: #DEEACD;
+        --tp-secondary: #B98A4E;
+        --tp-secondary-soft: #F3E4CC;
+        --tp-border: #D7E4C7;
     }
     * { box-sizing: border-box; }
     body {
@@ -29,7 +30,7 @@
         color: var(--tp-text);
     }
     header {
-        background: linear-gradient(120deg, #F3D9B1, #EFAA8B 60%, #E2725B);
+        background: linear-gradient(120deg, #C9DDB8, #8AB56E 60%, #5C8A4A);
         color: #fff;
         padding: 14px 16px;
         display: flex;
@@ -62,20 +63,20 @@
     .trip-main { flex: 1; min-width: 280px; }
     .sidebar-year { font-size: 11px; color: var(--tp-text-muted); font-weight: 500; margin: 14px 0 8px; }
     .sidebar-year:first-child { margin-top: 0; }
-    .sidebar-card { background: var(--tp-surface); border: 1px solid var(--tp-border); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; cursor: pointer; }
-    .sidebar-card:hover { border-color: var(--tp-accent); }
-    .sidebar-card.active { background: var(--tp-accent); border-color: var(--tp-accent); }
+    .sidebar-card { background: var(--tp-surface); border: 1px solid var(--tp-border); border-left: 4px solid transparent; border-radius: 0 12px 12px 0; padding: 10px 12px; margin-bottom: 8px; cursor: pointer; }
+    .sidebar-card:hover { border-color: var(--tp-accent); border-left-color: var(--tp-accent); }
+    .sidebar-card.active { background: var(--tp-accent-soft); border-color: var(--tp-accent-soft); border-left-color: var(--tp-accent-dark); }
     .sidebar-card .range { font-size: 11px; color: var(--tp-text-muted); }
-    .sidebar-card.active .range { color: rgba(255,255,255,0.85); }
+    .sidebar-card.active .range { color: var(--tp-accent-dark); }
     .sidebar-card .name { font-size: 13px; font-weight: 500; color: var(--tp-text); margin-top: 2px; }
-    .sidebar-card.active .name { color: #fff; font-weight: 700; }
+    .sidebar-card.active .name { color: var(--tp-accent-dark); font-weight: 700; }
     .trip-title-heading { display: flex; align-items: center; gap: 8px; margin: 4px 0 16px; }
     .trip-title-heading h2 { font-size: 22px; font-weight: 700; color: var(--tp-accent-dark); margin: 0; }
     .trip-title-heading input { font-size: 20px; font-weight: 700; color: var(--tp-accent-dark); padding: 4px 10px; }
     .trip-title-edit-btn { border: none; background: none; cursor: pointer; font-size: 15px; color: var(--tp-text-muted); flex-shrink: 0; }
     .trip-title-edit-btn:hover { color: var(--tp-accent-dark); }
     .card-header-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-    .date-badge { background: var(--tp-accent); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
+    .date-badge { background: transparent; border: 1.5px solid var(--tp-accent); color: var(--tp-accent-dark); font-size: 11px; font-weight: 700; padding: 2px 10px; border-radius: 999px; }
     .waypoint-list { margin-top: 6px; }
     .waypoint-item { display: flex; align-items: center; gap: 8px; background: var(--tp-bg); border-radius: 12px; padding: 8px 10px; margin-bottom: 6px; font-size: 13px; }
     .waypoint-item .remove { cursor: pointer; color: var(--tp-text-muted); flex-shrink: 0; }
@@ -140,6 +141,7 @@
     }
     input:focus, select:focus, textarea:focus { outline: 2px solid var(--tp-accent); border-color: transparent; }
     .row2 { display: grid; grid-template-columns: 100px 1fr; gap: 10px; }
+    .row2-even { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .transport-options { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 6px; }
     .transport-option { display: flex; align-items: center; gap: 5px; font-size: 14px; color: var(--tp-text); }
     .transport-option input { width: auto; }
@@ -170,8 +172,8 @@
     }
     button.ghost:hover { background: var(--tp-accent-soft); color: var(--tp-accent-dark); border-color: var(--tp-accent-soft); }
     button.btn-sm { padding: 7px 14px; font-size: 12px; margin-top: 8px; box-shadow: none; }
-    button.btn-sage { color: #5A6A38; border-color: #C9D6A8; background: #F1F5E6; }
-    button.btn-sage:hover { background: #E4EDCB; color: #3F4B27; border-color: #C9D6A8; }
+    button.btn-sage { color: #8A5A23; border-color: #E0C69A; background: var(--tp-secondary-soft); }
+    button.btn-sage:hover { background: #ECD6AC; color: #6B4419; border-color: #E0C69A; }
     .danger-btn { background: #A32D2D !important; box-shadow: 0 6px 16px rgba(163,45,45,0.3) !important; }
     .danger-btn:hover { background: #832222 !important; }
     .suggestions {
@@ -215,7 +217,7 @@
     .ai-loading { display: none; text-align: center; color: var(--tp-text-muted); font-size: 13px; margin-top: 10px; }
     .toast {
         position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-        background: var(--tp-text); color: #FBF3E7; padding: 10px 18px; border-radius: 999px;
+        background: var(--tp-text); color: var(--tp-bg); padding: 10px 18px; border-radius: 999px;
         font-size: 13px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 2000;
     }
     .toast.show { opacity: 1; }
@@ -301,7 +303,7 @@
         <h2>新しい旅行</h2>
         <label>旅行名</label>
         <input type="text" id="trip-title" placeholder="例: 沖縄旅行">
-        <div class="row2">
+        <div class="row2-even">
             <div><label>開始日</label><input type="date" id="trip-start"></div>
             <div><label>終了日</label><input type="date" id="trip-end"></div>
         </div>
@@ -318,7 +320,7 @@
         <h2>✨ AIに旅程を考えてもらう</h2>
         <label>行き先・やりたいこと</label>
         <textarea id="ai-prompt" rows="3" placeholder="例: 沖縄で3泊4日、ビーチと美ら海水族館に行きたい"></textarea>
-        <div class="row2">
+        <div class="row2-even">
             <div><label>開始日（任意）</label><input type="date" id="ai-start"></div>
             <div><label>終了日（任意）</label><input type="date" id="ai-end"></div>
         </div>
@@ -340,6 +342,19 @@
         <div class="modal-actions">
             <button class="ghost" onclick="closeModal('import-modal')">キャンセル</button>
             <button class="primary" onclick="submitImport()">取り込む</button>
+        </div>
+    </div>
+</div>
+
+<!-- 日追加モーダル -->
+<div class="modal-overlay" id="add-day-modal">
+    <div class="modal">
+        <h2>日を追加</h2>
+        <label>日付</label>
+        <input type="date" id="add-day-date">
+        <div class="modal-actions">
+            <button class="ghost" onclick="closeModal('add-day-modal')">キャンセル</button>
+            <button class="primary" onclick="confirmAddDay()">追加する</button>
         </div>
     </div>
 </div>
@@ -740,8 +755,19 @@ function addDay() {
         d.setDate(d.getDate() + 1);
         next = d.toISOString().slice(0, 10);
     }
-    trip.days.push({date: next, items: []});
-    currentDayIndex = trip.days.length - 1;
+    document.getElementById('add-day-date').value = next;
+    document.getElementById('add-day-modal').classList.add('active');
+}
+
+function confirmAddDay() {
+    const trip = currentTrip();
+    if (!trip) return;
+    const dateVal = document.getElementById('add-day-date').value;
+    if (!dateVal) { showToast('日付を選択してください'); return; }
+    trip.days.push({date: dateVal, items: []});
+    trip.days.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    currentDayIndex = trip.days.findIndex(d => d.date === dateVal);
+    closeModal('add-day-modal');
     renderAll();
     scheduleSave();
 }
