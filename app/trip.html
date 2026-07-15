@@ -247,6 +247,12 @@
                 <div class="trip-title-heading" id="trip-title-heading"></div>
 
                 <div class="card">
+                    <div class="card-header-row"><div class="section-title">💰 予算</div></div>
+                    <div class="totals-row" id="day-total"></div>
+                    <div class="totals-row grand" id="trip-total"></div>
+                </div>
+
+                <div class="card">
                     <div class="card-header-row">
                         <div class="section-title">📅 旅程</div>
                         <span class="date-badge" id="current-date-badge"></span>
@@ -263,12 +269,6 @@
                     <div id="map"></div>
                 </div>
                 -->
-
-                <div class="card">
-                    <div class="card-header-row"><div class="section-title">💰 予算</div></div>
-                    <div class="totals-row" id="day-total"></div>
-                    <div class="totals-row grand" id="trip-total"></div>
-                </div>
             </div>
         </div>
     </div>
@@ -411,10 +411,8 @@
             <div class="waypoint-list" id="waypoint-list"></div>
         </div>
 
-        <div class="row2">
-            <div><label>金額</label><input type="number" id="item-cost" placeholder="0"></div>
-            <div><label>通貨</label><input type="text" id="item-cost-currency" value="JPY"></div>
-        </div>
+        <label>金額（円）</label>
+        <input type="number" id="item-cost" placeholder="0">
 
         <label>メモ</label>
         <textarea id="item-notes" rows="2"></textarea>
@@ -862,7 +860,7 @@ function renderItems() {
     }
     items.forEach((item, idx) => {
         const tLabel = transportLabel(item.transport);
-        const costLabel = item.cost != null && item.cost !== '' ? `${Number(item.cost).toLocaleString()} ${item.costCurrency || 'JPY'}` : '';
+        const costLabel = item.cost != null && item.cost !== '' ? `${Number(item.cost).toLocaleString()}円` : '';
         const row = document.createElement('div');
         row.className = 'item-row';
         row.innerHTML = `
@@ -981,7 +979,6 @@ function resetItemModal() {
     document.getElementById('transport-other-label').value = '';
     document.getElementById('transport-other-label').style.display = 'none';
     document.getElementById('item-cost').value = '';
-    document.getElementById('item-cost-currency').value = 'JPY';
     selectedPlace = null;
     itemWaypoints = [];
     document.getElementById('waypoint-search').value = '';
@@ -1017,7 +1014,6 @@ function editItem(id) {
     document.getElementById('transport-other-label').value = t.otherLabel || '';
     document.getElementById('transport-other-label').style.display = t.other ? 'block' : 'none';
     document.getElementById('item-cost').value = item.cost != null ? item.cost : '';
-    document.getElementById('item-cost-currency').value = item.costCurrency || 'JPY';
     itemWaypoints = (item.transportWaypoints || []).slice();
     renderWaypointList();
     toggleWaypointSection();
@@ -1078,7 +1074,7 @@ function saveItem() {
     };
     const costRaw = document.getElementById('item-cost').value;
     const cost = costRaw === '' ? null : parseFloat(costRaw);
-    const costCurrency = document.getElementById('item-cost-currency').value.trim() || 'JPY';
+    const costCurrency = 'JPY';  // 円固定
     const transportWaypoints = transport.car ? itemWaypoints.slice() : [];
 
     const items = trip.days[currentDayIndex].items;
@@ -1201,21 +1197,10 @@ async function renderMap() {
 renderMap._token = 0;
 
 // ── 予算サマリー ──────────────────────────────────────────
-function sumByCurrency(items) {
-    const byCurrency = {};
-    items.forEach(i => {
-        if (i.cost != null && i.cost !== '' && !isNaN(i.cost)) {
-            const cur = i.costCurrency || 'JPY';
-            byCurrency[cur] = (byCurrency[cur] || 0) + Number(i.cost);
-        }
-    });
-    return byCurrency;
-}
-
-function formatTotals(byCurrency) {
-    const entries = Object.entries(byCurrency);
-    if (entries.length === 0) return '0';
-    return entries.map(([cur, amt]) => `${amt.toLocaleString()} ${cur}`).join(' + ');
+function sumTotal(items) {
+    // 円固定。通貨は区別せず全額を単純合算する
+    return items.reduce((sum, i) =>
+        (i.cost != null && i.cost !== '' && !isNaN(i.cost)) ? sum + Number(i.cost) : sum, 0);
 }
 
 function renderBudget() {
@@ -1225,8 +1210,8 @@ function renderBudget() {
     if (!trip) { dayEl.innerHTML = ''; tripEl.innerHTML = ''; return; }
     const dayItems = trip.days[currentDayIndex] ? trip.days[currentDayIndex].items : [];
     const allItems = trip.days.flatMap(d => d.items);
-    dayEl.innerHTML = `<span>本日の合計</span><span>${formatTotals(sumByCurrency(dayItems))}</span>`;
-    tripEl.innerHTML = `<span>旅行全体の合計</span><span>${formatTotals(sumByCurrency(allItems))}</span>`;
+    dayEl.innerHTML = `<span>本日の合計</span><span>${sumTotal(dayItems).toLocaleString()}円</span>`;
+    tripEl.innerHTML = `<span>旅行全体の合計</span><span>${sumTotal(allItems).toLocaleString()}円</span>`;
 }
 
 // ── 初期化 ────────────────────────────────────────────────
