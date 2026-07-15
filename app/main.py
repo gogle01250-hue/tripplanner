@@ -280,6 +280,7 @@ def _build_days_from_ai(raw_days):
 async def ai_suggest(request: Request):
     body = await request.json()
     prompt = (body.get("prompt") or "").strip()
+    origin = (body.get("origin") or "").strip()
     start_date = (body.get("start_date") or "").strip()
     end_date = (body.get("end_date") or "").strip()
     if not prompt:
@@ -290,6 +291,8 @@ async def ai_suggest(request: Request):
         "各予定のplaceには、番地までの詳細住所ではなく、地図検索でヒットするシンプルな施設名・地名のみを入れてください（例:「清水寺」）。"
         f"\n\n希望: {prompt}"
     )
+    if origin:
+        instruction += f"\n出発地: {origin}（1日目はこの出発地から始めてください）"
     if start_date:
         instruction += f"\n開始日: {start_date}"
     if end_date:

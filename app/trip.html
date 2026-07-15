@@ -4,8 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TripPlanner</title>
+<!-- 地図機能は一時停止中。復帰するにはこの2行のコメントを外す（軽量化のため読み込みを停止）
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+-->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
@@ -226,6 +228,7 @@
 <body>
 <header>
     <h1>🧳 TripPlanner</h1>
+    <span style="font-size:11px; color:rgba(255,255,255,0.75); align-self:flex-end; margin-bottom:2px;">v1.7</span>
     <div class="room-badge" id="room-badge"></div>
     <div class="spacer"></div>
     <button onclick="openCreateChoiceModal()">+ 新しい旅行</button>
@@ -254,10 +257,12 @@
                     <div id="item-list"></div>
                 </div>
 
+                <!-- 地図機能は一時停止中。復帰するにはこのカードのコメントを外す
                 <div class="card">
                     <div class="card-header-row"><div class="section-title">🗺️ 地図</div></div>
                     <div id="map"></div>
                 </div>
+                -->
 
                 <div class="card">
                     <div class="card-header-row"><div class="section-title">💰 予算</div></div>
@@ -318,6 +323,8 @@
 <div class="modal-overlay" id="ai-suggest-modal">
     <div class="modal">
         <h2>✨ AIに旅程を考えてもらう</h2>
+        <label>出発地（任意）</label>
+        <input type="text" id="ai-origin" placeholder="例: 東京駅">
         <label>行き先・やりたいこと</label>
         <textarea id="ai-prompt" rows="3" placeholder="例: 沖縄で3泊4日、ビーチと美ら海水族館に行きたい"></textarea>
         <div class="row2-even">
@@ -381,10 +388,12 @@
             <div><label>時刻</label><input type="time" id="item-time"></div>
             <div><label>タイトル</label><input type="text" id="item-title" placeholder="例: 美ら海水族館"></div>
         </div>
-        <label>場所を検索</label>
-        <input type="text" id="item-place-search" placeholder="地名を入力して検索" oninput="onPlaceSearchInput()">
+        <label>場所（自由入力）</label>
+        <input type="text" id="item-place-search" placeholder="例: 清水寺">
         <div class="suggestions" id="place-suggestions" style="display:none;"></div>
         <div id="item-place-selected" style="font-size:13px; color:var(--tp-accent-dark); margin-top:6px;"></div>
+        <!-- 地図機能停止中は自由入力欄として使用。復帰時は上の input を
+             placeholder="地名を入力して検索" oninput="onPlaceSearchInput()" に戻す -->
 
         <label>前の予定からの移動手段</label>
         <div class="transport-options">
@@ -556,6 +565,7 @@ function addAiTrip(title, rawDays) {
 }
 
 function openAiSuggestModal() {
+    document.getElementById('ai-origin').value = '';
     document.getElementById('ai-prompt').value = '';
     document.getElementById('ai-start').value = '';
     document.getElementById('ai-end').value = '';
@@ -565,6 +575,7 @@ function openAiSuggestModal() {
 async function submitAiSuggest() {
     const prompt = document.getElementById('ai-prompt').value.trim();
     if (!prompt) { showToast('行き先ややりたいことを入力してください'); return; }
+    const origin = document.getElementById('ai-origin').value.trim();
     const start_date = document.getElementById('ai-start').value;
     const end_date = document.getElementById('ai-end').value;
     setModalLoading('ai-suggest-modal', true);
@@ -572,7 +583,7 @@ async function submitAiSuggest() {
         const res = await fetch('/api/ai/suggest', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({prompt, start_date, end_date})
+            body: JSON.stringify({prompt, origin, start_date, end_date})
         });
         const data = await res.json();
         if (!data.ok) { showToast(data.error || 'AI生成に失敗しました'); return; }
@@ -789,7 +800,7 @@ function renderAll() {
     renderDayTabs();
     renderCurrentDateBadge();
     renderItems();
-    renderMap();
+    // renderMap();  // 地図機能は一時停止中。復帰するにはこの行のコメントを外す
     renderBudget();
 }
 
@@ -887,7 +898,7 @@ function moveItem(idx, dir) {
     if (newIdx < 0 || newIdx >= items.length) return;
     [items[idx], items[newIdx]] = [items[newIdx], items[idx]];
     renderItems();
-    renderMap();
+    // renderMap();  // 地図機能は一時停止中。復帰するにはこの行のコメントを外す
     scheduleSave();
 }
 
@@ -902,8 +913,10 @@ function toggleOtherLabel() {
 }
 
 function toggleWaypointSection() {
-    const checked = document.getElementById('transport-car').checked;
-    document.getElementById('waypoint-section').style.display = checked ? 'block' : 'none';
+    // 地図機能停止中は経由地セクションを常に非表示にする。
+    // 復帰するには下の1行を有効化し、次の常時非表示の行を削除する
+    // document.getElementById('waypoint-section').style.display = document.getElementById('transport-car').checked ? 'block' : 'none';
+    document.getElementById('waypoint-section').style.display = 'none';
 }
 
 function renderWaypointList() {
